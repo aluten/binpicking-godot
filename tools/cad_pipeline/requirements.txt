@@ -1,0 +1,9 @@
+# Omzetting van de igus-STEP naar Godot. Getest met deze versies.
+# Uitleg per pakket: docs/vereisten.md
+trimesh==5.2.0
+cascadio==0.1.1
+numpy==2.2.6
+scipy==1.15.3
+pillow==12.3.0
+fast_simplification==0.2.0
+coacd==1.0.14

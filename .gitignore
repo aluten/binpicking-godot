@@ -3,3 +3,4 @@ godot/.godot/
 cad/
 *.step
 *.stp
+godot/generated/
