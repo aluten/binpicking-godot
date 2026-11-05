@@ -1,6 +1,6 @@
-"""Toont de opbouw van een STEP-bestand, zonder iets te wijzigen of te exporteren.
+"""Shows the structure of a STEP file, without changing or exporting anything.
 
-Gebruik:
+Usage:
     python tools/cad_pipeline/inspect_step.py cad/r4.32.stp
 """
 
@@ -13,7 +13,7 @@ import trimesh
 
 
 def collect_parts(scene):
-    """Geeft alle onderdelen terug in wereldcoordinaten, in de eenheid van de scene."""
+    """Returns all parts in world coordinates, in the unit of the scene."""
     parts = []
     for node in scene.graph.nodes_geometry:
         transform, geometry_name = scene.graph[node]
@@ -24,7 +24,7 @@ def collect_parts(scene):
 
 
 def oriented_extents(mesh):
-    """Afmetingen van de kleinste gedraaide doos, gesorteerd van groot naar klein."""
+    """Size of the smallest rotated box, sorted from large to small."""
     try:
         return np.sort(mesh.bounding_box_oriented.primitive.extents)[::-1]
     except Exception:
@@ -47,7 +47,7 @@ def report(scene, max_rows=40):
     print(f"Totale omvang     : {fmt(scene.extents)} (eenheid van de scene)")
     print(f"Eenheid volgens bestand: {scene.units}")
 
-    # Gelijke onderdelen herken je aan driehoeken en afmetingen, ook als ze gedraaid staan.
+    # Equal parts are recognised by triangles and size, even when rotated.
     groups = defaultdict(list)
     for name, mesh in parts:
         size = oriented_extents(mesh)

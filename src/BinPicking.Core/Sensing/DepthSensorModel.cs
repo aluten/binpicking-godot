@@ -1,27 +1,15 @@
 namespace BinPicking.Core.Sensing;
 
-/// <summary>Waarom een pixel geen meting heeft.</summary>
-public enum MissingReason : byte
-{
-    None,
-    LowSignal,
-    Shadow,
-    Edge,
-}
-
-/// <summary>Uitkomst van het sensormodel. Een pixel zonder meting heeft diepte NaN.</summary>
-public sealed record DepthSensorResult(float[] Depth, MissingReason[] Missing);
-
 /// <summary>
-/// Maakt van perfecte diepte wat een structured-light-camera ongeveer zou meten:
-/// gaten bij weinig teruggekaatst licht, schaduw van de projector, fouten langs randen en ruis.
+/// Turns perfect depth into roughly what a structured-light camera would measure:
+/// holes from low returned light, projector shadow, errors along edges, and noise.
 /// </summary>
 public static class DepthSensorModel
 {
-    /// <param name="camera">De camera die de perfecte diepte zag.</param>
-    /// <param name="idealDepth">Diepte per pixel langs de kijkas, in meters.</param>
-    /// <param name="projectorDepth">Dezelfde scène gezien vanaf de projector, evenwijdig verschoven.</param>
-    /// <param name="reflectance">Teruggekaatst deel van het licht per pixel, van 0 tot 1.</param>
+    /// <param name="camera">The camera that produced the perfect depth.</param>
+    /// <param name="idealDepth">Depth per pixel along the optical axis, in metres.</param>
+    /// <param name="projectorDepth">The same scene from the projector, shifted in parallel.</param>
+    /// <param name="reflectance">Share of light returned per pixel, from 0 to 1.</param>
     public static DepthSensorResult Apply(
         PinholeCamera camera,
         float[] idealDepth,
@@ -32,7 +20,7 @@ public static class DepthSensorModel
         int count = camera.Width * camera.Height;
         if (idealDepth.Length != count || projectorDepth.Length != count || reflectance.Length != count)
         {
-            throw new ArgumentException("Alle beelden moeten even groot zijn als de camera.");
+            throw new ArgumentException("All images must match the camera size.");
         }
 
         var depth = new float[count];
@@ -47,7 +35,7 @@ public static class DepthSensorModel
                 int i = y * camera.Width + x;
                 float z = idealDepth[i];
 
-                // De volgorde van de loting ligt vast, zodat dezelfde seed hetzelfde beeld geeft.
+                // The draw order is fixed so that the same seed gives the same image.
                 double edgeRoll = pixelRandom.NextDouble();
                 double signalRoll = pixelRandom.NextDouble();
                 double noiseRollA = pixelRandom.NextDouble();
@@ -83,7 +71,7 @@ public static class DepthSensorModel
         return new DepthSensorResult(depth, missing);
     }
 
-    /// <summary>Hoeveel licht terugkomt: lager bij zwart, schuin en ver weg.</summary>
+    /// <summary>How much light returns: less for black, oblique and distant surfaces.</summary>
     private static float Signal(
         PinholeCamera camera, float[] depth, float reflectance, int x, int y, DepthSensorSettings settings)
     {
@@ -92,7 +80,7 @@ public static class DepthSensorModel
         return reflectance * Incidence(camera, depth, x, y) * distance * distance;
     }
 
-    /// <summary>Cosinus van de hoek tussen het oppervlak en de kijkrichting, uit de diepte zelf berekend.</summary>
+    /// <summary>Cosine of the angle between surface and view ray, derived from the depth itself.</summary>
     private static float Incidence(PinholeCamera camera, float[] depth, int x, int y)
     {
         if (x <= 0 || y <= 0 || x >= camera.Width - 1 || y >= camera.Height - 1)
@@ -143,7 +131,7 @@ public static class DepthSensorModel
     private static bool IsShadowed(
         PinholeCamera camera, float[] projectorDepth, int x, int y, float z, DepthSensorSettings settings)
     {
-        // Hetzelfde punt, bekeken vanaf de projector die Baseline naar +X staat.
+        // The same point, seen from the projector that sits Baseline towards +X.
         float pointX = (x + 0.5f - camera.Cx) * z / camera.Fx;
         int projectorX = (int)MathF.Floor(camera.Cx + camera.Fx * (pointX - settings.ProjectorBaseline) / z);
         if (projectorX < 0 || projectorX >= camera.Width)

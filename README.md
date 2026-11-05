@@ -1,60 +1,47 @@
 # Bin picking in Godot
 
-Een werkende, uitlegbare simulatie van bin picking met een zuignap: één zwart onderdeel pakken uit
-een pallet vol dezelfde zwarte onderdelen. Het project gebruikt een igus-kabelrupsschakel als
-openbaar voorbeeld, en draait voorlopig volledig in simulatie.
+A working, explainable simulation of bin picking with a suction cup: pick one black part from a pallet full
+of identical black parts. The project uses an igus cable chain link as a public example and currently runs
+entirely in simulation.
 
-> Status: de CAD-stap, een pallet met 720 schakels, een dieptecamera met sensormodel en de keuze van
-> een pickpunt werken. De pick zelf moet nog worden gebouwd. Zie
-> [docs/overdracht.md](docs/overdracht.md).
+> Status: the CAD step, a pallet with 720 links, a depth camera with a sensor model, and choosing a pick point
+> all work. The pick itself still has to be built.
 
-## Snel starten
+## Quick start
 
-1. Installeer de software uit [docs/vereisten.md](docs/vereisten.md).
-2. Download het igus-model. De bestanden staan bewust niet in deze repository:
-   1. Open de [igus-CAD-pagina van R4.32.10.125.0](https://www.igus-cad.com/default.aspx?cul=en-GB&ArtNr=R4.32.10.125.0&mandant=INT).
-   2. Kies bij **Chain length** de optie **Quantity chain links** en vul **9** in.
-   3. Kies **STEP** als formaat en klik op de downloadknop.
-   4. Download het bestand via het **Download center**.
-   5. Bewaar het als `cad/r4.32.stp`.
-3. Maak de Godot-bestanden, vanuit de hoofdmap van de repository:
+1. Install the software from [docs/requirements.md](docs/requirements.md).
+2. Download the igus model. These files are deliberately not in this repository:
+   1. Open the [igus CAD page for R4.32.10.125.0](https://www.igus-cad.com/default.aspx?cul=en-GB&ArtNr=R4.32.10.125.0&mandant=INT).
+   2. Under **Chain length**, choose **Quantity chain links** and enter **9**.
+   3. Choose **STEP** as the format and click the download button.
+   4. Download the file through the **Download center**.
+   5. Save it as `cad/r4.32.stp`.
+3. Create the Godot files, from the repository root:
    ```powershell
    py -3.12 -m venv .venv
    .venv\Scripts\activate
    pip install -r tools\cad_pipeline\requirements.txt
    python tools\cad_pipeline\convert_link.py cad\r4.32.stp godot\generated
    ```
-4. Open `godot/project.godot` in Godot 4.7.2 (.NET-editie) en klik op de hamer om te bouwen.
-5. Open `link_physics_test.tscn` en druk op F6. De Output moet eindigen met `RESULTAAT: GESLAAGD`.
+4. Open `godot/project.godot` in Godot 4.7.2 (.NET edition) and click the hammer to build.
+5. Open `Scenes/link_physics_test.tscn` and press F6. The Output must end with `RESULTAAT: GESLAAGD`.
+6. Open `Scenes/pallet_bin.tscn` and press F6 to see the pallet. Without a stored fill, you first watch the bin
+   fill up. The controls are shown at the top left.
 
-6. Open `pallet_bin.tscn` en druk op F6 om de pallet met schakels te bekijken. Bestaat de vulling nog
-   niet, dan zie je de bak eerst vollopen. Bediening staat linksboven in beeld.
+## Documentation
 
-## Documentatie
-
-| Document | Waarvoor |
+| Document | Purpose |
 |---|---|
-| [docs/vereisten.md](docs/vereisten.md) | Wat je moet installeren, waarom, en bekende valkuilen |
-| [docs/cad-pijplijn.md](docs/cad-pijplijn.md) | Hoe van een STEP-bestand een bruikbare schakel wordt |
-| [docs/bak.md](docs/bak.md) | Hoe de pallet is opgebouwd en gevuld, en de bediening |
-| [docs/sensormodel.md](docs/sensormodel.md) | Hoe de virtuele camera zwarte onderdelen meet |
-| [docs/pickpunt.md](docs/pickpunt.md) | Hoe een pickpunt wordt gekozen en gecontroleerd |
-| [docs/testen.md](docs/testen.md) | Welke tests er zijn, hoe je ze leest en wat ze opleverden |
-| [docs/overdracht.md](docs/overdracht.md) | Status, gemaakte keuzes, open punten en volgende stappen |
+| [docs/architecture.md](docs/architecture.md) | How the code is organised and where things belong |
+| [docs/requirements.md](docs/requirements.md) | What to install, why, and known pitfalls |
+| [docs/cad-pipeline.md](docs/cad-pipeline.md) | How a STEP file becomes a usable link |
+| [docs/bin.md](docs/bin.md) | How the pallet is built and filled, and the controls |
+| [docs/sensor-model.md](docs/sensor-model.md) | How the virtual camera measures black parts |
+| [docs/pick-point.md](docs/pick-point.md) | How a pick point is chosen and verified |
+| [docs/testing.md](docs/testing.md) | Which tests exist, how to read them and what they showed |
+| [docs/handover.md](docs/handover.md) | Status, decisions, open points and next steps |
 
-## Mappen
+## About the model
 
-| Map | Inhoud | In Git |
-|---|---|---|
-| `godot/` | Godot-project met de testscènes | Ja |
-| `godot/generated/` | Gegenereerde meshes uit het igus-model | Nee |
-| `src/BinPicking.Core/` | Algoritmes zonder Godot: sensormodel en pickpunt | Ja |
-| `tests/BinPicking.Core.Tests/` | Tests van die algoritmes | Ja |
-| `tools/cad_pipeline/` | Scripts van STEP naar Godot | Ja |
-| `cad/` | Het gedownloade igus-model | Nee |
-| `docs/` | Documentatie | Ja |
-
-## Over het model
-
-igus is niet betrokken bij dit project. Download het CAD-model zelf bij igus; de voorwaarden van igus
-gelden daarvoor. Plaats het model of de daaruit gegenereerde bestanden niet in deze repository.
+igus is not involved in this project. Download the CAD model from igus yourself; the igus terms apply. Do not
+add the model or the files generated from it to this repository.

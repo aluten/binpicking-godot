@@ -1,9 +1,9 @@
-"""Maakt uit de igus-STEP de Godot-bestanden voor een enkele schakel.
+"""Creates the Godot files for a single link from the igus STEP file.
 
-Assenstelsel van het resultaat, in meters:
-    X = lengte van de ketting, Y = bovenkant (zuignapvlak), Z = breedte.
+Axes of the result, in metres:
+    X = chain length, Y = top (suction surface), Z = width.
 
-Gebruik:
+Usage:
     python tools/cad_pipeline/convert_link.py cad/r4.32.stp godot/generated
 """
 
@@ -24,7 +24,7 @@ BLACK = trimesh.visual.material.PBRMaterial(
 
 
 def pick_link(scene):
-    """Kiest de schakel met de meeste driehoeken die een gesloten mesh is."""
+    """Picks the watertight link with the most triangles."""
     candidates = []
     for node in scene.graph.nodes_geometry:
         transform, name = scene.graph[node]
@@ -42,7 +42,7 @@ def pick_link(scene):
 
 
 def straighten(mesh):
-    """Legt de schakel recht: grootste zijvlak = Z, grootste vlak haaks daarop = Y."""
+    """Straightens the link: largest side face = Z, largest face perpendicular to it = Y."""
     order = np.argsort(-mesh.facets_area)
     width = mesh.facets_normal[order[0]]
     top = next(mesh.facets_normal[i] for i in order
@@ -56,7 +56,7 @@ def straighten(mesh):
 
 
 def measure_flat(mesh, sign):
-    """Meet de grootste cirkel op het grootste vlak boven (+1) of onder (-1)."""
+    """Measures the largest circle on the largest face on top (+1) or bottom (-1)."""
     normals = mesh.facets_normal[:, 1] * sign
     indices = np.flatnonzero(normals > 0.999)
     best = indices[np.argmax(mesh.facets_area[indices])]
@@ -78,7 +78,7 @@ def measure_flat(mesh, sign):
     center_x = (column - 2) / scale + minimum[0]
     center_z = (row - 2) / scale + minimum[1]
 
-    # Steekt er iets uit boven het vlak, binnen de cirkel en daarbuiten?
+    # Does anything protrude above the face, inside the circle and outside it?
     points, _ = trimesh.sample.sample_surface(mesh, 300000, seed=1)
     height = (points[:, 1] - plane_y) * sign
     inside = np.hypot(points[:, 0] - center_x, points[:, 2] - center_z) < radius
@@ -118,7 +118,7 @@ def main():
     lod = link.simplify_quadric_decimation(face_count=LOD_FACES)
     export_visual(lod, args.output_dir / "schakel_lod.glb")
 
-    # Pas hier laden: coacd laat het inlezen van de STEP vastlopen als het al geladen is.
+    # Import here: coacd makes reading the STEP file crash if it is already loaded.
     import coacd
 
     print("Botsingsvorm berekenen...", flush=True)

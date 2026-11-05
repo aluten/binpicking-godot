@@ -1,42 +1,42 @@
 namespace BinPicking.Core.Sensing;
 
 /// <summary>
-/// Instellingen van het sensormodel. De standaardwaarden zijn illustratief en niet gemeten aan een
-/// echte camera. Ze laten zien welk effect zwart materiaal, schuine vlakken en afstand hebben.
+/// Settings of the sensor model. The defaults are illustrative and were not measured on a real camera.
+/// They show the effect of black material, oblique surfaces and distance.
 /// </summary>
 public sealed record DepthSensorSettings
 {
-    /// <summary>Afstand waarop het signaal alleen van reflectie en hoek afhangt, in meters.</summary>
+    /// <summary>Distance at which the signal depends only on reflectance and angle, in metres.</summary>
     public float ReferenceDistance { get; init; } = 2f;
 
-    /// <summary>Onder dit signaal ontbreekt de meting vrijwel altijd.</summary>
+    /// <summary>Below this signal the measurement is almost always missing.</summary>
     public float SignalAlwaysMissing { get; init; } = 0.005f;
 
-    /// <summary>Boven dit signaal is de meting vrijwel altijd aanwezig.</summary>
+    /// <summary>Above this signal the measurement is almost always present.</summary>
     public float SignalAlwaysValid { get; init; } = 0.06f;
 
-    /// <summary>Ruis bij een helder vlak op de referentieafstand, in meters (1 sigma).</summary>
+    /// <summary>Noise on a bright surface at the reference distance, in metres (1 sigma).</summary>
     public float BaseNoise { get; init; } = 0.0005f;
 
-    /// <summary>Bij dit signaal of hoger is er alleen basisruis; lager signaal geeft meer ruis.</summary>
+    /// <summary>At or above this signal there is only base noise; a lower signal adds noise.</summary>
     public float NoiseReferenceSignal { get; init; } = 0.1f;
 
-    /// <summary>Bovengrens van de ruis in meters.</summary>
+    /// <summary>Upper limit of the noise in metres.</summary>
     public float MaxNoise { get; init; } = 0.01f;
 
-    /// <summary>Afstand tussen camera en projector in meters, naar +X in het camerastelsel.</summary>
+    /// <summary>Distance between camera and projector in metres, towards camera +X.</summary>
     public float ProjectorBaseline { get; init; } = 0.15f;
 
-    /// <summary>Een pixel is beschaduwd als de projector dit veel dichterbij iets anders ziet, in meters.</summary>
+    /// <summary>A pixel is shadowed if the projector sees something this much closer, in metres.</summary>
     public float ShadowTolerance { get; init; } = 0.008f;
 
-    /// <summary>Dieptesprong met het buurpixel waarboven een pixel als rand telt, in meters.</summary>
+    /// <summary>Depth jump to a neighbouring pixel above which a pixel counts as an edge, in metres.</summary>
     public float EdgeJump { get; init; } = 0.015f;
 
-    /// <summary>Kans dat een randpixel geen meting geeft.</summary>
+    /// <summary>Chance that an edge pixel has no measurement.</summary>
     public float EdgeMissingChance { get; init; } = 0.7f;
 
-    /// <summary>Grootte in pixels van de blokken die gaten laten samenklonteren.</summary>
+    /// <summary>Size in pixels of the blocks that make holes cluster.</summary>
     public int ClusterSize { get; init; } = 4;
 
     public int Seed { get; init; } = 1;

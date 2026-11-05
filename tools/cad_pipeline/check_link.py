@@ -1,6 +1,6 @@
-"""Meet hoe goed de vereenvoudigde mesh en de botsingsvorm op de volledige schakel passen.
+"""Measures how well the simplified mesh and collision shape fit the full link.
 
-Gebruik:
+Usage:
     python tools/cad_pipeline/check_link.py godot/generated
 """
 
@@ -17,7 +17,7 @@ def load(path):
 
 
 def deviation_mm(reference, other):
-    """Afstand van punten op de schakel tot het dichtstbijzijnde punt op het andere model."""
+    """Distance from points on the link to the nearest point on the other model."""
     points, _ = trimesh.sample.sample_surface(reference, 40000, seed=2)
     targets, _ = trimesh.sample.sample_surface(other, 200000, seed=3)
     distances = cKDTree(targets).query(points)[0] * 1000

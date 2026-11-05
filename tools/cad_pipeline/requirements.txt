@@ -1,5 +1,5 @@
-# Omzetting van de igus-STEP naar Godot. Getest met deze versies.
-# Uitleg per pakket: docs/vereisten.md
+# Conversion of the igus STEP file to Godot. Tested with these versions.
+# Explanation per package: docs/requirements.md
 trimesh==5.2.0
 cascadio==0.1.1
 numpy==2.2.6
