@@ -1,11 +1,11 @@
 # Bin picking in Godot
 
 Een werkende, uitlegbare simulatie van bin picking met een zuignap: één zwart onderdeel pakken uit
-een bak met duizenden dezelfde zwarte onderdelen. Het project gebruikt een igus-kabelrupsschakel als
+een pallet vol dezelfde zwarte onderdelen. Het project gebruikt een igus-kabelrupsschakel als
 openbaar voorbeeld, en draait voorlopig volledig in simulatie.
 
-> Status: de dieptecamera, de CAD-stap en de physics van een kleine stapel werken. Het sensormodel,
-> de bak met 3000 schakels en de pick zelf moeten nog worden gebouwd. Zie
+> Status: de dieptecamera, de CAD-stap en een pallet met 720 schakels werken. Het sensormodel en de
+> pick zelf moeten nog worden gebouwd. Zie
 > [docs/overdracht.md](docs/overdracht.md).
 
 ## Snel starten
@@ -27,12 +27,16 @@ openbaar voorbeeld, en draait voorlopig volledig in simulatie.
 4. Open `godot/project.godot` in Godot 4.7.2 (.NET-editie) en klik op de hamer om te bouwen.
 5. Open `link_physics_test.tscn` en druk op F6. De Output moet eindigen met `RESULTAAT: GESLAAGD`.
 
+6. Open `pallet_bin.tscn` en druk op F6 om de pallet met schakels te bekijken. Bestaat de vulling nog
+   niet, dan zie je de bak eerst vollopen. Bediening staat linksboven in beeld.
+
 ## Documentatie
 
 | Document | Waarvoor |
 |---|---|
 | [docs/vereisten.md](docs/vereisten.md) | Wat je moet installeren, waarom, en bekende valkuilen |
 | [docs/cad-pijplijn.md](docs/cad-pijplijn.md) | Hoe van een STEP-bestand een bruikbare schakel wordt |
+| [docs/bak.md](docs/bak.md) | Hoe de pallet is opgebouwd en gevuld, en de bediening |
 | [docs/testen.md](docs/testen.md) | Welke tests er zijn, hoe je ze leest en wat ze opleverden |
 | [docs/overdracht.md](docs/overdracht.md) | Status, gemaakte keuzes, open punten en volgende stappen |
 

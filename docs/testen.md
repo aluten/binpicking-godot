@@ -4,6 +4,7 @@
 |---|---|---|
 | `depth_test.tscn` | Komt de diepte nauwkeurig in C# terecht? | Drie metingen wijken maximaal 1 mm af |
 | `link_physics_test.tscn` | Werken import, schaal en stapelen? | Geen regel met `FOUT` |
+| `pallet_bin.tscn` | Past de vulling in de bak? | Geen regel met `FOUT` |
 
 Open de scène in Godot, klik op de hamer en druk op F6. De resultaten staan in de Output.
 
@@ -63,3 +64,22 @@ Twee conclusies:
 
 De resultaten verschillen tussen runs, ook bij dezelfde seed: seed 1 gaf in een herhaling 7,0 ms
 gemiddeld. Vergelijk dus geen losse metingen.
+
+Op de Windows-laptop (RTX 4070 Laptop GPU) gaf een run: tot rust na 11,8 s, 2,0 mm in de vloer, physics
+gemiddeld 3,3 ms en maximaal 4,5 ms per stap, en 13 van 29 schakels mee bewogen.
+
+## Pallet met schakels
+
+`pallet_bin.tscn` toont een europallet met 5 opzetranden en 720 schakels. Zie
+[bak.md](bak.md) voor de opbouw.
+
+| Regel | Betekenis |
+|---|---|
+| Schakels | Is het volledige aantal geladen? |
+| Diepst in de wand | Steekt een schakel door de plank van 20 mm? |
+| Diepst in de bodem | Zakt een schakel door de bodem? De grens is 5 mm |
+| Hoogste punt | Hoe vol is de bak? Dit is informatie, geen eis |
+
+Resultaat van de opgeslagen vulling, gemaakt op dezelfde Linux-cloudcomputer: 720 van 720 schakels,
+2,8 mm in de wand, 2,8 mm in de bodem en hoogste punt op 962 mm, binnen de rand van 1000 mm.
+De physics controleert geen overlap tussen schakels onderling in dit rapport.

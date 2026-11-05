@@ -20,7 +20,7 @@ diepte -> puntenwolk -> bakfilter -> vlakke kandidaten -> afdichtingsscore
 |---|---|---|
 | 0 | Onderdeel gekozen, repository en CAD-verwijzing | Klaar |
 | 1 | CAD naar Godot, stabiel vallende schakels | Klaar, test op Windows nog uitvoeren |
-| 2 | Bak met 3000 schakels | Nog niet begonnen |
+| 2 | Pallet met 720 schakels | Werkt en is opgeslagen; nog geen physics na het laden |
 | 3 | Dieptecamera | Perfecte diepte werkt, sensormodel ontbreekt |
 | 4 | Eerste pick met zuignap | Nog niet begonnen |
 | 5 | Foutgevallen en statistieken | Nog niet begonnen |
@@ -36,6 +36,7 @@ diepte -> puntenwolk -> bakfilter -> vlakke kandidaten -> afdichtingsscore
 | igus R4.32.10.125.0 | Openbaar te downloaden, zwart, standaard gesloten en schakels kunnen in elkaar haken |
 | Model niet in Git | Toestemming voor verspreiding is niet bevestigd, dus iedereen downloadt het zelf |
 | Eerst een pipeline zonder AI | Elke stap blijft te laten zien en uit te leggen |
+| 5 opzetranden en 720 schakels, niet 3000 | 3000 komt ruim 4 m hoog op één pallet; zie [bak.md](bak.md) |
 | Scripts in plaats van handmatig exporteren | Iedereen kan hetzelfde resultaat opnieuw maken |
 
 ## Openstaande punten
@@ -50,6 +51,5 @@ diepte -> puntenwolk -> bakfilter -> vlakke kandidaten -> afdichtingsscore
 
 ## Volgende stap
 
-Bouw de bak met 3000 schakels: stort de stapel eenmalig offline, sla de posities op en bevries wat
-niet nodig is. Gebruik de metingen uit [testen.md](testen.md) om te bepalen hoeveel schakels rond de
-pick actief mogen zijn.
+Hang de dieptecamera boven de pallet en voeg het sensormodel toe, zodat te zien is wat een echte camera
+aan een zwarte bak zou meten. Daarna volgt de eerste pick met de zuignap.

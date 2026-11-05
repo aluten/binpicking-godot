@@ -10,10 +10,6 @@ using Godot;
 /// </summary>
 public partial class LinkPhysicsTest : Node3D
 {
-    private const string VisualPath = "res://generated/schakel_visual.glb";
-    private const string LodPath = "res://generated/schakel_lod.glb";
-    private const string CollisionPath = "res://generated/schakel_collision.glb";
-
     private const int LinkCount = 30;
     private const int RandomSeed = 1;
     private const float BinInnerSize = 0.5f;
@@ -22,7 +18,6 @@ public partial class LinkPhysicsTest : Node3D
     private const float FloorThickness = 0.5f; // Dik, zodat een schakel er niet doorheen kan worden gedrukt.
     private const float SpawnSpacing = 0.17f;
     private const float LinkMassKg = 0.15f; // Aanname voor de test, geen igus-waarde.
-    private const float ShapeMargin = 0.001f;
 
     private static readonly Vector3 ExpectedSizeMm = new(110.2f, 54f, 122f);
     private const float SizeToleranceMm = 1f;
@@ -57,9 +52,9 @@ public partial class LinkPhysicsTest : Node3D
         GD.Print($"Physics-engine: {ProjectSettings.GetSetting("physics/3d/physics_engine")}, " +
                  $"penetration slop: {ProjectSettings.GetSetting("physics/jolt_physics_3d/simulation/penetration_slop")} m");
 
-        Mesh? visual = LoadSingleMesh(VisualPath);
-        Mesh? lod = LoadSingleMesh(LodPath);
-        List<(Shape3D Shape, Transform3D Offset)> shapes = LoadCollisionShapes();
+        Mesh? visual = LinkAssets.LoadSingleMesh(LinkAssets.VisualPath);
+        Mesh? lod = LinkAssets.LoadSingleMesh(LinkAssets.LodPath);
+        List<(Shape3D Shape, Transform3D Offset)> shapes = LinkAssets.LoadCollisionShapes();
 
         if (visual == null || lod == null || shapes.Count == 0)
         {
@@ -102,63 +97,6 @@ public partial class LinkPhysicsTest : Node3D
         _physicsMilliseconds += step;
         _worstPhysicsMilliseconds = Mathf.Max(_worstPhysicsMilliseconds, step);
         _physicsSteps++;
-    }
-
-    private static Mesh? LoadSingleMesh(string path)
-    {
-        var scene = ResourceLoader.Load<PackedScene>(path);
-        if (scene == null)
-        {
-            GD.PrintErr($"Kan {path} niet laden.");
-            return null;
-        }
-
-        Node root = scene.Instantiate();
-        var found = new List<(Mesh Mesh, Transform3D Offset)>();
-        CollectMeshes(root, Transform3D.Identity, found);
-        root.Free();
-        return found.Count > 0 ? found[0].Mesh : null;
-    }
-
-    private static List<(Shape3D Shape, Transform3D Offset)> LoadCollisionShapes()
-    {
-        var shapes = new List<(Shape3D, Transform3D)>();
-        var scene = ResourceLoader.Load<PackedScene>(CollisionPath);
-        if (scene == null)
-        {
-            GD.PrintErr($"Kan {CollisionPath} niet laden.");
-            return shapes;
-        }
-
-        Node root = scene.Instantiate();
-        var meshes = new List<(Mesh Mesh, Transform3D Offset)>();
-        CollectMeshes(root, Transform3D.Identity, meshes);
-        root.Free();
-
-        foreach ((Mesh mesh, Transform3D offset) in meshes)
-        {
-            ConvexPolygonShape3D shape = mesh.CreateConvexShape(true, false);
-            shape.Margin = ShapeMargin;
-            shapes.Add((shape, offset));
-        }
-        return shapes;
-    }
-
-    private static void CollectMeshes(Node node, Transform3D parent, List<(Mesh, Transform3D)> result)
-    {
-        Transform3D current = parent;
-        if (node is Node3D node3D)
-        {
-            current = parent * node3D.Transform;
-        }
-        if (node is MeshInstance3D { Mesh: not null } instance)
-        {
-            result.Add((instance.Mesh, current));
-        }
-        foreach (Node child in node.GetChildren())
-        {
-            CollectMeshes(child, current, result);
-        }
     }
 
     private static bool CheckImport(Mesh visual, int hullCount)
