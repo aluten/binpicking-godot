@@ -141,7 +141,7 @@ public static class GraspPlanner
                     continue;
                 }
                 total++;
-                if (MathF.Abs(along) <= settings.PlaneTolerance)
+                if (MathF.Abs(along) <= settings.SealTolerance)
                 {
                     sealed_++;
                 }

@@ -9,9 +9,9 @@ Voor elke 6e pixel in de bak:
 
 | Stap | Vraag | Standaardeis |
 |---|---|---|
-| 1. Bakfilter | Ligt het punt binnen de bak? | Tussen wanden, rand en bodem |
-| 2. Metingen | Zijn er genoeg punten onder de nap? | Minstens 25% van de napoppervlakte |
-| 3. Vlakheid | Past er een vlak door de punten? | 95% binnen 2 mm |
+| 1. Bakfilter | Ligt het punt binnen de bak? | 1 cm van de wand, minstens 3 cm boven de bodem |
+| 2. Metingen | Zijn er genoeg punten onder de nap? | Minstens 15% van de napoppervlakte |
+| 3. Vlakheid | Past er een vlak door de punten? | 90% binnen 3 mm |
 | 4. Hoek | Kan de nap er recht op? | Maximaal 35 graden schuin |
 | 5. Houder | Raakt de houder iets hogers? | Binnen Ø 50 mm niets meer dan 5 mm boven het vlak |
 | 6. Opening | Past de houder door de bakopening? | Langs de normaal binnen de wanden |
@@ -24,27 +24,39 @@ blijven over, onderling minstens een napbreedte uit elkaar.
 
 ## Bekijken
 
-Open `pallet_bin.tscn` en druk op F6. **Groen** is het beste pickpunt met de aanrijrichting, **blauw** zijn de
-andere kandidaten. In de sensorweergave (toets 4) staan ze als cirkels. De Output laat zien hoeveel
-kandidaten bij elke stap afvallen.
+Open `pallet_bin.tscn` en druk op F6. In het begin zijn er geen pickpunten te zien, zodat je eerst de bak en
+de meting kunt uitleggen.
 
-## Resultaat op de opgeslagen vulling
+| Toets P | In beeld |
+|---|---|
+| Eerste keer | De beste kandidaten in **blauw** |
+| Tweede keer | De keuze in **groen** met de aanrijrichting |
+| Derde keer | Weer verborgen |
 
-Op de Linux-cloudcomputer, met één vaste vulling en seed:
+In de sensorweergave (toets 4) staan ze als cirkels. De Output laat zien hoeveel kandidaten bij elke stap
+afvallen. Met toets R kun je een lagere vulling maken en vergelijken.
 
-| | Zwarte schakels | Lichte schakels |
-|---|---:|---:|
-| Beoordeeld | 9.618 | 19.181 |
-| Te weinig metingen | 1.064 | 0 |
-| Niet vlak | 5.841 | 15.390 |
-| Te schuin | 1.306 | 2.351 |
-| Houder raakt | 518 | 477 |
-| Buiten de opening | 73 | 140 |
-| Goedgekeurd | 816 | 823 |
-| Beste 20 met minstens 90% afdichting | 20 | 20 |
+## Resultaat
 
-Ondanks 67% ontbrekende metingen vindt de planner dus goede punten op zwart, omdat de vlakken die recht naar
-de camera wijzen de meeste metingen houden.
+Op de Linux-cloudcomputer, met vaste vullingen en één seed:
+
+| | Vol, zwart | Vol, licht | 96 schakels, zwart |
+|---|---:|---:|---:|
+| Beoordeeld | 5.940 | 15.385 | 262 |
+| Te weinig metingen | 334 | 0 | 238 |
+| Niet vlak | 2.434 | 10.348 | 17 |
+| Te schuin | 1.123 | 2.963 | 1 |
+| Houder raakt | 877 | 868 | 3 |
+| Buiten de opening | 117 | 193 | 0 |
+| Goedgekeurd | 1.055 | 1.013 | 3 |
+| Beste kandidaten met minstens 90% afdichting | 19 van 20 | 20 van 20 | 3 van 3 |
+
+**Op zwart werkt het vol goed, maar laag in de bak blijven weinig plekken over.** Verder weg komt er minder
+licht terug, waardoor de meeste plekken te weinig metingen hebben. Daar is de marge dus klein.
+
+De eisen zijn hierop aangepast. Bij 25% metingen en 95% binnen 2 mm vond de planner op deze lage vulling
+niets, terwijl op perfecte diepte wel 463 plekken werden goedgekeurd. De meting ruist immers, dus voor het
+zoeken geldt nu 3 mm; de controle blijft 2 mm.
 
 ## Wat de controle wel en niet zegt
 

@@ -27,7 +27,8 @@ dus voor het visieprobleem verandert er weinig. Het aantal staat in `TargetLinks
 | 1 / 2 / 3 | Overzicht / vanaf de sensor / dichtbij |
 | 4 | 3D / perfecte diepte / sensor |
 | B | Zwarte of lichte schakels |
-| R | Bak opnieuw vullen en meekijken |
+| R | Bak leegmaken en vullen; nog een keer R stopt op die hoogte |
+| P | Kandidaten tonen; nog een keer: keuze tonen; nog een keer: verbergen |
 
 ## Hoe de bak wordt gevuld
 
@@ -39,7 +40,8 @@ de scène de bak opnieuw.
 2. Wacht tot ze stilliggen, maximaal 4 s.
 3. Bevries schakels die meer dan 12 cm onder de hoogste schakel liggen en stil zijn.
 4. Steekt zo'n schakel in de wand of bodem, laat hem dan opnieuw vallen.
-5. Herhaal tot alle 720 schakels zijn geplaatst, en sla de posities op.
+5. Herhaal tot alle 720 schakels zijn geplaatst of tot je op R drukt. De laatste schakels landen eerst.
+   Daarna worden de posities opgeslagen, ook bij een gedeeltelijke vulling.
 
 Een geladen vulling gebruikt een `MultiMesh`: één mesh die 720 keer wordt getekend, zonder physics.
 

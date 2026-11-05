@@ -51,6 +51,12 @@ public partial class PalletBinDemo : Node3D
 	private const float LightPartReflectance = 0.5f;
 	private const float GoodSealShare = 0.9f;
 
+	// Dunner dan een platliggende schakel, zodat de lege bodem geen pickpunt wordt.
+	private const float MinPickHeightAboveFloor = 0.03f;
+
+	// De wanden zelf zijn geen kandidaten.
+	private const float WallMargin = 0.01f;
+
 	private static readonly Color WoodColor = new(0.72f, 0.56f, 0.36f);
 	private static readonly Color MetalColor = new(0.55f, 0.57f, 0.6f);
 
@@ -63,6 +69,7 @@ public partial class PalletBinDemo : Node3D
 	private OrbitCamera _camera = null!;
 	private Label _status = null!;
 	private bool _pouring;
+	private bool _stopRequested;
 	private double _batchElapsed;
 	private double _extraSettleSeconds;
 	private double _pourSeconds;
@@ -128,9 +135,17 @@ public partial class PalletBinDemo : Node3D
 				_lightParts = !_lightParts;
 				ShowSensorResult();
 				break;
-			case Key.R when !_pouring:
+			case Key.R when _pouring:
+				// Stoppen: er vallen geen nieuwe schakels meer bij, de laatste landen nog.
+				_stopRequested = true;
+				_status.Text = $"Stoppen bij {_spawned} schakels: de laatste schakels landen...";
+				break;
+			case Key.R:
 				DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(FillPath));
 				GetTree().ReloadCurrentScene();
+				break;
+			case Key.P:
+				CyclePickDisplay();
 				break;
 		}
 	}
@@ -156,7 +171,7 @@ public partial class PalletBinDemo : Node3D
 		}
 
 		FreezeDeepLinks();
-		if (_spawned >= TargetLinks)
+		if (_spawned >= TargetLinks || _stopRequested)
 		{
 			List<RigidBody3D> stuck = _active.Where(link => !IsClearOfBin(link, _surfacePoints)).ToList();
 			if (stuck.Count > 0 && _extraSettleSeconds < MaxExtraSettleSeconds)
@@ -243,7 +258,7 @@ public partial class PalletBinDemo : Node3D
 
 		_spawned += count;
 		_batchElapsed = 0.0;
-		_status.Text = $"Bak vullen: {_spawned} van {TargetLinks} schakels, {_active.Count} bewegend";
+		_status.Text = $"Bak vullen: {_spawned} van {TargetLinks} schakels, {_active.Count} bewegend. R = stoppen";
 		GD.Print($"Storten: {_spawned} geplaatst, {_active.Count} actief, {_pourSeconds:F0} s gesimuleerd");
 	}
 
@@ -371,7 +386,8 @@ public partial class PalletBinDemo : Node3D
 			multiMesh.SetInstanceTransform(i, transforms[i]);
 		}
 		AddChild(new MultiMeshInstance3D { Multimesh = multiMesh });
-		_status.Text = $"{transforms.Count} schakels in de bak";
+		_sensorStatus = $"{transforms.Count} schakels in de bak";
+		_status.Text = _sensorStatus;
 		Report(transforms);
 	}
 
@@ -410,7 +426,7 @@ public partial class PalletBinDemo : Node3D
 			}
 		}
 
-		GD.Print($"{(transforms.Count == TargetLinks ? "OK  " : "FOUT")} Schakels: {transforms.Count} van {TargetLinks}");
+		GD.Print($"INFO Schakels: {transforms.Count} (een volle bak is {TargetLinks})");
 		GD.Print($"{(deepestWall < PlankThickness ? "OK  " : "FOUT")} Diepst in de wand: {deepestWall * 1000f:F1} mm " +
 				 $"(plank {PlankThickness * 1000f:F0} mm); {outside} schakels meer dan 5 mm");
 		GD.Print($"{(deepest <= 0.005f ? "OK  " : "FOUT")} Diepst in de bodem: {deepest * 1000f:F1} mm (maximaal 5 mm)");
@@ -553,9 +569,10 @@ public partial class PalletBinDemo : Node3D
 		box.AddChild(new Label
 		{
 			Text = "Muis: slepen = draaien, middelste knop = verschuiven, wiel = zoomen\n" +
-				   "1 = overzicht, 2 = vanaf de sensor, 3 = dichtbij, R = opnieuw vullen\n" +
+				   "1 = overzicht, 2 = vanaf de sensor, 3 = dichtbij\n" +
+				   "R = vullen starten, nog een keer R = stoppen op deze hoogte\n" +
 				   "4 = 3D / perfecte diepte / sensor, B = zwarte of lichte schakels\n" +
-				   "Groen = beste pickpunt, blauw = andere kandidaten",
+				   "P = kandidaten (blauw), nog een keer = keuze (groen), nog een keer = verbergen",
 		});
 	}
 
@@ -609,11 +626,21 @@ public partial class PalletBinDemo : Node3D
 		DepthSensorResult result = DepthSensorModel.Apply(camera, _idealDepth, _projectorDepth, reflectance, _sensorSettings);
 		ReportSensor(result, reflectance);
 		_sensorResult = result;
-		FindGrasps(result);
-		UpdateSensorView();
+		_grasps.Clear();
+		if (_pickMode != PickMode.Hidden)
+		{
+			FindGrasps(result);
+		}
+		ShowPickDisplay();
 	}
 
 	private DepthSensorResult? _sensorResult;
+	private enum PickMode { Hidden, Candidates, Best }
+
+	private PickMode _pickMode = PickMode.Hidden;
+	private string _sensorStatus = string.Empty;
+	private string _pickStatus = string.Empty;
+	private string _bestPickStatus = string.Empty;
 	private readonly GraspSettings _graspSettings = new();
 	private List<GraspCandidate> _grasps = new();
 	private readonly List<Node3D> _graspMarkers = new();
@@ -658,7 +685,41 @@ public partial class PalletBinDemo : Node3D
 					  $"(weinig licht {Percent(partLow, parts):F0}%, schaduw {Percent(partShadow, parts):F0}%, " +
 					  $"rand {Percent(partEdge, parts):F0}%), ruis {noiseMm:F1} mm";
 		GD.Print($"INFO Sensor, {text}; hout en achtergrond {Percent(otherMissing, other):F0}% zonder meting");
-		_status.Text = text;
+		_sensorStatus = text;
+	}
+
+	/// <summary>Toets P: niets, dan alle kandidaten, dan ook het beste pickpunt.</summary>
+	private void CyclePickDisplay()
+	{
+		if (_rig == null || _sensorResult == null)
+		{
+			return;
+		}
+
+		_pickMode = _pickMode switch
+		{
+			PickMode.Hidden => PickMode.Candidates,
+			PickMode.Candidates => PickMode.Best,
+			_ => PickMode.Hidden,
+		};
+		if (_pickMode == PickMode.Candidates)
+		{
+			FindGrasps(_sensorResult);
+		}
+		ShowPickDisplay();
+	}
+
+	private void ShowPickDisplay()
+	{
+		string line = _pickMode switch
+		{
+			PickMode.Hidden => "Druk op P om pickpunten te zoeken",
+			PickMode.Candidates => _pickStatus,
+			_ => _grasps.Count > 0 ? _bestPickStatus : _pickStatus,
+		};
+		_status.Text = $"{_sensorStatus}\n{line}";
+		ShowGraspMarkers();
+		UpdateSensorView();
 	}
 
 	private void FindGrasps(DepthSensorResult result)
@@ -666,8 +727,9 @@ public partial class PalletBinDemo : Node3D
 		PinholeCamera camera = _rig!.Camera;
 		// De bak vanuit de camera; camera-Y wijst naar wereld-Z.
 		var bin = new BinRegion(
-			-InnerLength / 2f, InnerLength / 2f, -InnerWidth / 2f, InnerWidth / 2f,
-			SensorAboveRim - 0.05f, SensorAboveRim + RimHeight);
+			-InnerLength / 2f + WallMargin, InnerLength / 2f - WallMargin,
+			-InnerWidth / 2f + WallMargin, InnerWidth / 2f - WallMargin,
+			SensorAboveRim - 0.05f, SensorAboveRim + RimHeight - MinPickHeightAboveFloor);
 
 		ulong started = Time.GetTicksMsec();
 		(_grasps, GraspSearchReport report) = GraspPlanner.FindGrasps(camera, result.Depth, bin, _graspSettings);
@@ -680,22 +742,21 @@ public partial class PalletBinDemo : Node3D
 		if (_grasps.Count == 0)
 		{
 			GD.Print("INFO Geen pickpunt gevonden.");
-			_status.Text += "\nGeen pickpunt gevonden";
-		}
-		else
-		{
-			GraspCandidate best = _grasps[0];
-			float bestSeal = GraspPlanner.TrueSealShare(camera, _idealDepth, best, _graspSettings);
-			int good = _grasps.Count(g => GraspPlanner.TrueSealShare(camera, _idealDepth, g, _graspSettings) >= GoodSealShare);
-			GD.Print($"INFO Beste pickpunt: {best.ValidShare * 100f:F0}% gemeten, {best.InlierShare * 100f:F0}% in het vlak, " +
-					 $"{best.TiltDegrees:F0} graden schuin; werkelijke afdichting {bestSeal * 100f:F0}%");
-			GD.Print($"INFO Controle met perfecte diepte: {good} van de {_grasps.Count} beste kandidaten dichten minstens " +
-					 $"{GoodSealShare * 100f:F0}% af");
-			_status.Text += $"\nPickpunt: werkelijke afdichting {bestSeal * 100f:F0}%; " +
-							$"{good} van {_grasps.Count} kandidaten goed";
+			_pickStatus = "Geen pickpunt gevonden";
+			return;
 		}
 
-		ShowGraspMarkers();
+		GraspCandidate best = _grasps[0];
+		float bestSeal = GraspPlanner.TrueSealShare(camera, _idealDepth, best, _graspSettings);
+		int good = _grasps.Count(g => GraspPlanner.TrueSealShare(camera, _idealDepth, g, _graspSettings) >= GoodSealShare);
+		GD.Print($"INFO Beste pickpunt: {best.ValidShare * 100f:F0}% gemeten, {best.InlierShare * 100f:F0}% in het vlak, " +
+				 $"{best.TiltDegrees:F0} graden schuin; werkelijke afdichting {bestSeal * 100f:F0}%");
+		GD.Print($"INFO Controle met perfecte diepte: {good} van de {_grasps.Count} beste kandidaten dichten minstens " +
+				 $"{GoodSealShare * 100f:F0}% af");
+		_pickStatus = $"{report.Accepted} plekken goedgekeurd, de {_grasps.Count} beste getoond; " +
+					  $"{good} dichten echt af. Druk op P voor de keuze";
+		_bestPickStatus = $"Gekozen: {best.ValidShare * 100f:F0}% gemeten, {best.TiltDegrees:F0} graden schuin, " +
+						  $"werkelijke afdichting {bestSeal * 100f:F0}%";
 	}
 
 	private void ShowGraspMarkers()
@@ -709,7 +770,7 @@ public partial class PalletBinDemo : Node3D
 		for (int i = 0; i < _grasps.Count; i++)
 		{
 			GraspCandidate grasp = _grasps[i];
-			bool best = i == 0;
+			bool best = i == 0 && _pickMode == PickMode.Best;
 			// Camera-X = wereld-X, camera-Y = wereld-Z, camera-Z wijst omlaag.
 			float height = RimHeight + SensorAboveRim;
 			var point = new Vector3(grasp.X, height - grasp.Z, grasp.Y);
@@ -751,13 +812,14 @@ public partial class PalletBinDemo : Node3D
 		for (int i = _grasps.Count - 1; i >= 0; i--)
 		{
 			GraspCandidate grasp = _grasps[i];
-			(byte r, byte g, byte b) = i == 0 ? ((byte)20, (byte)255, (byte)40) : ((byte)30, (byte)210, (byte)255);
+			bool isBest = i == 0 && _pickMode == PickMode.Best;
+			(byte r, byte g, byte b) = isBest ? ((byte)20, (byte)255, (byte)40) : ((byte)30, (byte)210, (byte)255);
 			float radius = _rig!.Camera.Fx * (_graspSettings.CupDiameter / 2f) / grasp.Z;
 			int steps = 128;
 			for (int s = 0; s < steps; s++)
 			{
 				float angle = s * Mathf.Tau / steps;
-				for (float extra = 0f; extra < (i == 0 ? 3f : 2f); extra += 1f)
+				for (float extra = 0f; extra < (isBest ? 3f : 2f); extra += 1f)
 				{
 					int x = grasp.PixelX + Mathf.RoundToInt((radius + extra) * Mathf.Cos(angle));
 					int y = grasp.PixelY + Mathf.RoundToInt((radius + extra) * Mathf.Sin(angle));
@@ -850,8 +912,14 @@ public partial class PalletBinDemo : Node3D
 		{
 			_camera.SetView(new Vector3(0f, RimHeight - 0.05f, 0f), 30f, 45f, 1.1f);
 		}
+		else if (view == "kand")
+		{
+			CyclePickDisplay();
+		}
 		else if (view == "pick")
 		{
+			CyclePickDisplay();
+			CyclePickDisplay();
 			GraspCandidate? best = _grasps.FirstOrDefault();
 			if (best != null)
 			{
@@ -864,6 +932,8 @@ public partial class PalletBinDemo : Node3D
 			_viewMode = view == "ideaal" ? 1 : 2;
 			_lightParts = view == "licht";
 			ShowSensorResult();
+			CyclePickDisplay();
+			CyclePickDisplay();
 		}
 
 		for (int i = 0; i < 6; i++)
