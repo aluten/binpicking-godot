@@ -1,0 +1,5 @@
+.venv/
+godot/.godot/
+cad/
+*.step
+*.stp
