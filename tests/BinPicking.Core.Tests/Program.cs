@@ -94,7 +94,7 @@ Check("A surface that is too tilted is rejected", steepFound.Count == 0 && steep
 float[] walled = Scene(2.05f);
 Box(walled, 150, 150, 250, 250, 1.9f);
 Box(walled, 196, 150, 204, 250, 1.8f);
-var (walledFound, walledReport) = GraspPlanner.FindGrasps(pickCamera, walled, bin, new GraspSettings { SearchStep = 3, ToolDiameter = 0.09f });
+var (walledFound, walledReport) = GraspPlanner.FindGrasps(pickCamera, walled, bin, new GraspSettings { SearchStep = 3, ToolDiameter = 0.09f, MaxCenterOffset = 1f });
 Check("The holder must not hit a higher part", walledReport.ToolCollision > 0 && walledFound.All(c => c.Z < 1.85f || MathF.Abs(c.X) > 0.04f));
 
 float[] edge = Scene(1.9f);
@@ -112,6 +112,15 @@ Check("The evaluator names a rough surface", Evaluator(noisy, bin).Evaluate(200,
 Check("The evaluator names a tilted surface", Evaluator(steep, bin).Evaluate(200, 200).Rejection == GraspRejection.TooTilted);
 Check("The evaluator names the bin opening", Evaluator(flat, smallBin).Evaluate(200, 200).Rejection == GraspRejection.OutsideOpening);
 Check("A floor below the bin floor is outside the bin", !Evaluator(Scene(2.2f), bin).IsInsideBin(200, 200));
+
+// A surface that is large for the cup: the middle is accepted and the edge is off-centre.
+float[] offCentre = Scene(2.05f);
+Box(offCentre, 170, 170, 230, 230, 1.8f);
+var centreSettings = new GraspSettings { SearchStep = 3, SurfaceSearchRadius = 0.15f };
+GraspEvaluation atMiddle = new GraspEvaluator(pickCamera, offCentre, bin, centreSettings).Evaluate(200, 200);
+GraspEvaluation atEdge = new GraspEvaluator(pickCamera, offCentre, bin, centreSettings).Evaluate(222, 200);
+Check("The middle of a surface is accepted", atMiddle.IsAccepted && atMiddle.Candidate!.CenterOffset < 0.003f);
+Check("The evaluator names a location away from the middle", atEdge.Rejection == GraspRejection.OffCenter);
 
 var splitStats = DepthSensorStatistics.Compute(shadowed, scene, i => i % 2 == 0);
 Check("Statistics split all pixels into parts and others",

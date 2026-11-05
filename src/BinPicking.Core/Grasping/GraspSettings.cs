@@ -25,6 +25,12 @@ public sealed record GraspSettings
 
     public float MaxTiltDegrees { get; init; } = 35f;
 
+    /// <summary>Radius around the cup in which the flat surface is measured.</summary>
+    public float SurfaceSearchRadius { get; init; } = 0.07f;
+
+    /// <summary>Maximum distance between the cup and the centre of the flat surface.</summary>
+    public float MaxCenterOffset { get; init; } = 0.02f;
+
     /// <summary>Evaluate a candidate every this many pixels.</summary>
     public int SearchStep { get; init; } = 6;
 

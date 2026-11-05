@@ -7,6 +7,7 @@ public enum GraspRejection
     TooFewPoints,
     NotFlat,
     TooTilted,
+    OffCenter,
     ToolCollision,
     OutsideOpening,
 }

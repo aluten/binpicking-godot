@@ -37,6 +37,7 @@ depth -> point cloud -> bin filter -> flat candidates -> sealing score
 | A pipeline without AI first | Every step stays visible and explainable |
 | 5 collars and 720 links, not 3000 | 3000 stands more than 4 m high on one pallet; see [bin.md](bin.md) |
 | Scripts instead of manual export | Anyone can reproduce the same result |
+| Pick strategy is an own heuristic | Explainable starting point; see [theory.md](theory.md) |
 | Algorithms separate from Godot | Testable without the engine; see [architecture.md](architecture.md) |
 
 ## Open points
@@ -48,6 +49,7 @@ depth -> point cloud -> bin filter -> flat candidates -> sealing score
 - **Confidentiality:** do not take cycle times, gripper choices or camera settings from the real project.
 - **Windows check:** `requirements.txt` has not been installed on Windows yet.
 - **Git LFS:** not in use, because there are no large files in Git.
+- **Forces:** the pick strategy does not model forces on the part yet; see [theory.md](theory.md).
 - **Dutch text:** text on screen and in the Output panel is still in Dutch.
 
 ## Next step

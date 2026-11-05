@@ -6,6 +6,7 @@ public sealed record GraspSearchReport(
     int TooFewPoints,
     int NotFlat,
     int TooTilted,
+    int OffCenter,
     int ToolCollision,
     int OutsideOpening,
     int Accepted);

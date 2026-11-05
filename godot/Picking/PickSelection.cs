@@ -50,6 +50,7 @@ public sealed class PickSelection
 
 		GD.Print($"INFO Pickpunten: {report.Evaluated} beoordeeld in {milliseconds} ms; " +
 				 $"te weinig metingen {report.TooFewPoints}, niet vlak {report.NotFlat}, te schuin {report.TooTilted}, " +
+				 $"niet in het midden {report.OffCenter}, " +
 				 $"houder raakt {report.ToolCollision}, buiten opening {report.OutsideOpening}, goed {report.Accepted}");
 
 		if (Candidates.Count == 0)
@@ -63,12 +64,12 @@ public sealed class PickSelection
 		float bestSeal = SealVerifier.TrueSealShare(camera, idealDepth, best, Settings);
 		int good = Candidates.Count(c => SealVerifier.TrueSealShare(camera, idealDepth, c, Settings) >= GoodSealShare);
 		GD.Print($"INFO Beste pickpunt: {best.ValidShare * 100f:F0}% gemeten, {best.InlierShare * 100f:F0}% in het vlak, " +
-				 $"{best.TiltDegrees:F0} graden schuin; werkelijke afdichting {bestSeal * 100f:F0}%");
+				 $"{best.TiltDegrees:F0} graden schuin, {best.CenterOffset * 1000f:F0} mm uit het midden; werkelijke afdichting {bestSeal * 100f:F0}%");
 		GD.Print($"INFO Controle met perfecte diepte: {good} van de {Candidates.Count} beste kandidaten dichten minstens " +
 				 $"{GoodSealShare * 100f:F0}% af");
 		_searchSummary = $"{report.Accepted} plekken goedgekeurd, de {Candidates.Count} beste getoond; " +
 						 $"{good} dichten echt af. Druk op P voor de keuze";
-		_bestSummary = $"Gekozen: {best.ValidShare * 100f:F0}% gemeten, {best.TiltDegrees:F0} graden schuin, " +
+		_bestSummary = $"Gekozen: {best.ValidShare * 100f:F0}% gemeten, {best.TiltDegrees:F0} graden schuin, {best.CenterOffset * 1000f:F0} mm uit het midden, " +
 					   $"werkelijke afdichting {bestSeal * 100f:F0}%";
 	}
 }

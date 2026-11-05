@@ -13,7 +13,7 @@ public static class GraspPlanner
     {
         var evaluator = new GraspEvaluator(camera, depth, bin, settings);
         var accepted = new List<GraspCandidate>();
-        int evaluated = 0, tooFew = 0, notFlat = 0, tooTilted = 0, collision = 0, outside = 0;
+        int evaluated = 0, tooFew = 0, notFlat = 0, tooTilted = 0, offCenter = 0, collision = 0, outside = 0;
 
         for (int y = 0; y < camera.Height; y += settings.SearchStep)
         {
@@ -43,6 +43,9 @@ public static class GraspPlanner
                     case GraspRejection.TooTilted:
                         tooTilted++;
                         break;
+                    case GraspRejection.OffCenter:
+                        offCenter++;
+                        break;
                     case GraspRejection.ToolCollision:
                         collision++;
                         break;
@@ -53,7 +56,7 @@ public static class GraspPlanner
             }
         }
 
-        var report = new GraspSearchReport(evaluated, tooFew, notFlat, tooTilted, collision, outside, accepted.Count);
+        var report = new GraspSearchReport(evaluated, tooFew, notFlat, tooTilted, offCenter, collision, outside, accepted.Count);
         return (KeepSeparated(accepted, settings), report);
     }
 

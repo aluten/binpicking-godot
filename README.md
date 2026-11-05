@@ -38,6 +38,7 @@ entirely in simulation.
 | [docs/bin.md](docs/bin.md) | How the pallet is built and filled, and the controls |
 | [docs/sensor-model.md](docs/sensor-model.md) | How the virtual camera measures black parts |
 | [docs/pick-point.md](docs/pick-point.md) | How a pick point is chosen and verified |
+| [docs/theory.md](docs/theory.md) | The theory behind the overlay and pick strategy, with sources |
 | [docs/testing.md](docs/testing.md) | Which tests exist, how to read them and what they showed |
 | [docs/handover.md](docs/handover.md) | Status, decisions, open points and next steps |
 

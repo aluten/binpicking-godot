@@ -13,4 +13,5 @@ public sealed record GraspCandidate(
     float ValidShare,
     float InlierShare,
     float TiltDegrees,
+    float CenterOffset,
     float Score);

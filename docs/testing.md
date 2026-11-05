@@ -88,5 +88,5 @@ highest point at 962 mm, inside the 1000 mm rim. Overlap between links is not me
 
 ## After the refactor
 
-The restructuring into modules changed no behaviour on the reference fills: fill, sensor percentages, search
+The restructuring into modules (before the middle requirement was added) changed no behaviour on the reference fills: fill, sensor percentages, search
 counts and best candidates were identical to before. Only `godot` paths and documentation changed.

@@ -3,6 +3,7 @@ namespace BinPicking.Core.Sensing;
 /// <summary>
 /// Turns perfect depth into roughly what a structured-light camera would measure:
 /// holes from low returned light, projector shadow, errors along edges, and noise.
+/// The causes are real; the formulas are a simplification and the values are illustrative. See docs/theory.md.
 /// </summary>
 public static class DepthSensorModel
 {
@@ -71,7 +72,10 @@ public static class DepthSensorModel
         return new DepthSensorResult(depth, missing);
     }
 
-    /// <summary>How much light returns: less for black, oblique and distant surfaces.</summary>
+    /// <summary>
+    /// How much light returns: less for black, oblique and distant surfaces.
+    /// A simple approximation: reflectance x cos(angle) / distance squared.
+    /// </summary>
     private static float Signal(
         PinholeCamera camera, float[] depth, float reflectance, int x, int y, DepthSensorSettings settings)
     {

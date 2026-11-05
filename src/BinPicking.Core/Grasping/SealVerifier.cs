@@ -2,7 +2,10 @@ using BinPicking.Core.Sensing;
 
 namespace BinPicking.Core.Grasping;
 
-/// <summary>Checks a pick point against perfect depth. This ground truth exists only in simulation.</summary>
+/// <summary>
+/// Checks a pick point against perfect depth. This ground truth exists only in simulation. It tests flatness
+/// under the cup, not a real vacuum seal such as the contact model in Dex-Net 3.0.
+/// </summary>
 public static class SealVerifier
 {
     /// <summary>Returns the share of the cup that lies within the seal tolerance of the chosen plane.</summary>
