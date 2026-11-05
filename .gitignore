@@ -4,3 +4,7 @@ cad/
 *.step
 *.stp
 godot/generated/
+src/**/bin/
+src/**/obj/
+tests/**/bin/
+tests/**/obj/

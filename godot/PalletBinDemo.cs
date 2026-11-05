@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BinPicking.Core.Sensing;
 using Godot;
 
 /// <summary>
@@ -42,6 +43,12 @@ public partial class PalletBinDemo : Node3D
 	private const float PourWallHeight = 3f;
 	private const float SpawnClearance = 0.14f;
 
+	// Sensor boven de bak. De kijkhoek past de hele rand in beeld.
+	private const float SensorAboveRim = 1.5f;
+	private const float RimHalfViewMeters = 0.47f;
+	private const float PartReflectanceLimit = 0.2f;
+	private const float LightPartReflectance = 0.5f;
+
 	private static readonly Color WoodColor = new(0.72f, 0.56f, 0.36f);
 	private static readonly Color MetalColor = new(0.55f, 0.57f, 0.6f);
 
@@ -59,6 +66,14 @@ public partial class PalletBinDemo : Node3D
 	private double _pourSeconds;
 	private ulong _pourStartedMs;
 	private int _spawned;
+	private readonly DepthSensorSettings _sensorSettings = new();
+	private DepthSensorRig? _rig;
+	private TextureRect _sensorView = null!;
+	private float[] _idealDepth = System.Array.Empty<float>();
+	private float[] _projectorDepth = System.Array.Empty<float>();
+	private float[] _reflectance = System.Array.Empty<float>();
+	private int _viewMode;
+	private bool _lightParts;
 	private int _droppedAgain;
 
 	public override void _Ready()
@@ -78,7 +93,7 @@ public partial class PalletBinDemo : Node3D
 		if (FileAccess.FileExists(FillPath))
 		{
 			ShowStoredFill();
-			_ = CaptureIfRequested();
+			_ = MeasureAndCapture();
 		}
 		else
 		{
@@ -103,6 +118,13 @@ public partial class PalletBinDemo : Node3D
 				break;
 			case Key.Key3:
 				_camera.SetView(new Vector3(0f, RimHeight - 0.05f, 0f), 30f, 45f, 1.1f);
+				break;
+			case Key.Key4:
+				CycleSensorView();
+				break;
+			case Key.B:
+				_lightParts = !_lightParts;
+				ShowSensorResult();
 				break;
 			case Key.R when !_pouring:
 				DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(FillPath));
@@ -491,7 +513,13 @@ public partial class PalletBinDemo : Node3D
 
 	private void BuildCamera()
 	{
-		_camera = new OrbitCamera { Fov = 45f, Near = 0.02f, Far = 30f };
+		_camera = new OrbitCamera
+		{
+			Fov = 45f,
+			Near = 0.02f,
+			Far = 30f,
+			CullMask = 1u | (1u << (DepthSensorRig.ModelLayer - 1)),
+		};
 		AddChild(_camera);
 		_camera.MakeCurrent();
 		ShowOverview();
@@ -499,12 +527,21 @@ public partial class PalletBinDemo : Node3D
 
 	private void ShowOverview() => _camera.SetView(new Vector3(0f, 0.5f, 0f), 28f, 55f, 2.8f);
 
-	private void ShowBinCamera() => _camera.SetView(new Vector3(0f, RimHeight, 0f), 0f, 90f, 2.2f);
+	private void ShowBinCamera() => _camera.SetView(new Vector3(0f, RimHeight, 0f), 0f, 90f, SensorAboveRim - 0.03f);
 
 	private void BuildHelp()
 	{
 		var layer = new CanvasLayer();
 		AddChild(layer);
+		_sensorView = new TextureRect
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			Visible = false,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		_sensorView.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		layer.AddChild(_sensorView);
 		var panel = new PanelContainer { Position = new Vector2(12f, 12f) };
 		layer.AddChild(panel);
 		var box = new VBoxContainer();
@@ -514,8 +551,164 @@ public partial class PalletBinDemo : Node3D
 		box.AddChild(new Label
 		{
 			Text = "Muis: slepen = draaien, middelste knop = verschuiven, wiel = zoomen\n" +
-				   "1 = overzicht, 2 = camera boven de bak, 3 = dichtbij, R = opnieuw vullen",
+				   "1 = overzicht, 2 = vanaf de sensor, 3 = dichtbij, R = opnieuw vullen\n" +
+				   "4 = 3D / perfecte diepte / sensor, B = zwarte of lichte schakels",
 		});
+	}
+
+	private async Task MeasureAndCapture()
+	{
+		if (DisplayServer.GetName() == "headless")
+		{
+			return;
+		}
+
+		_rig = new DepthSensorRig();
+		AddChild(_rig);
+		float height = RimHeight + SensorAboveRim;
+		// Hoogte van het beeld: de korte kant van de pallet bij de rand, met marge.
+		float verticalFov = 2f * Mathf.RadToDeg(Mathf.Atan(RimHalfViewMeters / SensorAboveRim));
+		_rig.Configure(new Vector3(0f, height, 0f), verticalFov, _sensorSettings.ProjectorBaseline);
+
+		(_idealDepth, _projectorDepth, _reflectance) = await _rig.CaptureAsync();
+		CheckRimDistance();
+		ShowSensorResult();
+		await CaptureIfRequested();
+	}
+
+	/// <summary>De bovenkant van de rand ligt op een bekende hoogte: dat controleert de hele keten.</summary>
+	private void CheckRimDistance()
+	{
+		PinholeCamera camera = _rig!.Camera;
+		float rimX = InnerLength / 2f + PlankThickness / 2f;
+		int x = Mathf.RoundToInt(camera.Cx + camera.Fx * rimX / SensorAboveRim);
+		int y = camera.Height / 2;
+		float measured = _idealDepth[y * camera.Width + x];
+		bool passed = Mathf.Abs(measured - SensorAboveRim) <= 0.005f;
+		GD.Print($"{(passed ? "OK  " : "FOUT")} Afstand tot de rand: {measured * 1000f:F1} mm, " +
+				 $"verwacht {SensorAboveRim * 1000f:F0} mm");
+	}
+
+	private void ShowSensorResult()
+	{
+		if (_rig == null || _idealDepth.Length == 0)
+		{
+			return;
+		}
+
+		float[] reflectance = _reflectance;
+		if (_lightParts)
+		{
+			reflectance = reflectance.Select(r => r < PartReflectanceLimit ? LightPartReflectance : r).ToArray();
+		}
+
+		PinholeCamera camera = _rig.Camera;
+		DepthSensorResult result = DepthSensorModel.Apply(camera, _idealDepth, _projectorDepth, reflectance, _sensorSettings);
+		ReportSensor(result, reflectance);
+		_sensorResult = result;
+		UpdateSensorView();
+	}
+
+	private DepthSensorResult? _sensorResult;
+
+	private void ReportSensor(DepthSensorResult result, float[] reflectance)
+	{
+		int parts = 0, partLow = 0, partShadow = 0, partEdge = 0, other = 0, otherMissing = 0;
+		double errorSum = 0;
+		int errorCount = 0;
+		for (int i = 0; i < result.Depth.Length; i++)
+		{
+			if (_reflectance[i] < PartReflectanceLimit)
+			{
+				parts++;
+				switch (result.Missing[i])
+				{
+					case MissingReason.LowSignal: partLow++; break;
+					case MissingReason.Shadow: partShadow++; break;
+					case MissingReason.Edge: partEdge++; break;
+					default:
+						double error = result.Depth[i] - _idealDepth[i];
+						errorSum += error * error;
+						errorCount++;
+						break;
+				}
+			}
+			else
+			{
+				other++;
+				if (result.Missing[i] != MissingReason.None)
+				{
+					otherMissing++;
+				}
+			}
+		}
+
+		double Percent(int value, int total) => total == 0 ? 0.0 : 100.0 * value / total;
+		string kind = _lightParts ? "lichte schakels" : "zwarte schakels";
+		int partMissing = partLow + partShadow + partEdge;
+		double noiseMm = errorCount == 0 ? 0.0 : System.Math.Sqrt(errorSum / errorCount) * 1000.0;
+		string text = $"{kind}: {Percent(partMissing, parts):F0}% zonder meting " +
+					  $"(weinig licht {Percent(partLow, parts):F0}%, schaduw {Percent(partShadow, parts):F0}%, " +
+					  $"rand {Percent(partEdge, parts):F0}%), ruis {noiseMm:F1} mm";
+		GD.Print($"INFO Sensor, {text}; hout en achtergrond {Percent(otherMissing, other):F0}% zonder meting");
+		_status.Text = text;
+	}
+
+	private void CycleSensorView()
+	{
+		if (_rig == null || _sensorResult == null)
+		{
+			return;
+		}
+		_viewMode = (_viewMode + 1) % 3;
+		UpdateSensorView();
+	}
+
+	private void UpdateSensorView()
+	{
+		if (_rig == null || _sensorResult == null)
+		{
+			return;
+		}
+
+		_sensorView.Visible = _viewMode != 0;
+		if (_viewMode != 0)
+		{
+			byte[] pixels = _viewMode == 1 ? DrawDepth(_idealDepth, null) : DrawDepth(_sensorResult.Depth, _sensorResult.Missing);
+			PinholeCamera camera = _rig.Camera;
+			Image image = Image.CreateFromData(camera.Width, camera.Height, false, Image.Format.Rgb8, pixels);
+			_sensorView.Texture = ImageTexture.CreateFromImage(image);
+		}
+	}
+
+	/// <summary>Dichtbij is licht en ver weg donker. Gaten: magenta = weinig licht, blauw = schaduw, geel = rand.</summary>
+	private byte[] DrawDepth(float[] depth, MissingReason[]? missing)
+	{
+		const float near = SensorAboveRim - 0.05f;
+		float far = SensorAboveRim + RimHeight + 0.05f;
+		var pixels = new byte[depth.Length * 3];
+		for (int i = 0; i < depth.Length; i++)
+		{
+			byte r, g, b;
+			if (missing != null && missing[i] != MissingReason.None)
+			{
+				(r, g, b) = missing[i] switch
+				{
+					MissingReason.LowSignal => ((byte)230, (byte)30, (byte)160),
+					MissingReason.Shadow => ((byte)40, (byte)90, (byte)230),
+					_ => ((byte)240, (byte)210, (byte)30),
+				};
+			}
+			else
+			{
+				float t = Mathf.Clamp((far - depth[i]) / (far - near), 0f, 1f);
+				r = g = b = (byte)(t * 255f);
+			}
+			pixels[i * 3] = r;
+			pixels[i * 3 + 1] = g;
+			pixels[i * 3 + 2] = b;
+		}
+		return pixels;
 	}
 
 	private async Task CaptureIfRequested()
@@ -537,8 +730,14 @@ public partial class PalletBinDemo : Node3D
 		{
 			_camera.SetView(new Vector3(0f, RimHeight - 0.05f, 0f), 30f, 45f, 1.1f);
 		}
+		else if (view == "ideaal" || view == "sensor" || view == "licht")
+		{
+			_viewMode = view == "ideaal" ? 1 : 2;
+			_lightParts = view == "licht";
+			ShowSensorResult();
+		}
 
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < 6; i++)
 		{
 			await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 		}

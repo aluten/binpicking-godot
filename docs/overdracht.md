@@ -21,7 +21,7 @@ diepte -> puntenwolk -> bakfilter -> vlakke kandidaten -> afdichtingsscore
 | 0 | Onderdeel gekozen, repository en CAD-verwijzing | Klaar |
 | 1 | CAD naar Godot, stabiel vallende schakels | Klaar, test op Windows nog uitvoeren |
 | 2 | Pallet met 720 schakels | Werkt en is opgeslagen; nog geen physics na het laden |
-| 3 | Dieptecamera | Perfecte diepte werkt, sensormodel ontbreekt |
+| 3 | Dieptecamera en sensormodel | Werkt; waarden zijn illustratief, nog niet op Windows getest |
 | 4 | Eerste pick met zuignap | Nog niet begonnen |
 | 5 | Foutgevallen en statistieken | Nog niet begonnen |
 | 6 | Positiebepaling met CAD-model | Nog niet begonnen |
@@ -51,5 +51,5 @@ diepte -> puntenwolk -> bakfilter -> vlakke kandidaten -> afdichtingsscore
 
 ## Volgende stap
 
-Hang de dieptecamera boven de pallet en voeg het sensormodel toe, zodat te zien is wat een echte camera
-aan een zwarte bak zou meten. Daarna volgt de eerste pick met de zuignap.
+Maak van de gemeten diepte een puntenwolk, zoek vlakke kandidaten die groot genoeg zijn voor de zuignap en
+kies een pickpunt. Daarna volgt de eerste pick.

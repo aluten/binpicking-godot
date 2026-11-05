@@ -24,7 +24,9 @@ dus voor het visieprobleem verandert er weinig. Het aantal staat in `TargetLinks
 | Linker- of rechtermuisknop slepen | Draaien |
 | Middelste muisknop slepen | Verschuiven |
 | Muiswiel | Zoomen |
-| 1 / 2 / 3 | Overzicht / camera boven de bak / dichtbij |
+| 1 / 2 / 3 | Overzicht / vanaf de sensor / dichtbij |
+| 4 | 3D / perfecte diepte / sensor |
+| B | Zwarte of lichte schakels |
 | R | Bak opnieuw vullen en meekijken |
 
 ## Hoe de bak wordt gevuld

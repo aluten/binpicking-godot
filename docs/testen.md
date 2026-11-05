@@ -4,7 +4,8 @@
 |---|---|---|
 | `depth_test.tscn` | Komt de diepte nauwkeurig in C# terecht? | Drie metingen wijken maximaal 1 mm af |
 | `link_physics_test.tscn` | Werken import, schaal en stapelen? | Geen regel met `FOUT` |
-| `pallet_bin.tscn` | Past de vulling in de bak? | Geen regel met `FOUT` |
+| `pallet_bin.tscn` | Past de vulling in de bak en klopt de sensorafstand? | Geen regel met `FOUT` |
+| `tests/BinPicking.Core.Tests` | Klopt het sensormodel? | `RESULTAAT: GESLAAGD`, zie [sensormodel.md](sensormodel.md) |
 
 Open de scène in Godot, klik op de hamer en druk op F6. De resultaten staan in de Output.
 
@@ -82,4 +83,4 @@ gemiddeld 3,3 ms en maximaal 4,5 ms per stap, en 13 van 29 schakels mee bewogen.
 
 Resultaat van de opgeslagen vulling, gemaakt op dezelfde Linux-cloudcomputer: 720 van 720 schakels,
 2,8 mm in de wand, 2,8 mm in de bodem en hoogste punt op 962 mm, binnen de rand van 1000 mm.
-De physics controleert geen overlap tussen schakels onderling in dit rapport.
+Overlap tussen schakels onderling wordt nog niet gemeten.
