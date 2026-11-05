@@ -5,7 +5,7 @@
 | `depth_test.tscn` | Komt de diepte nauwkeurig in C# terecht? | Drie metingen wijken maximaal 1 mm af |
 | `link_physics_test.tscn` | Werken import, schaal en stapelen? | Geen regel met `FOUT` |
 | `pallet_bin.tscn` | Past de vulling in de bak en klopt de sensorafstand? | Geen regel met `FOUT` |
-| `tests/BinPicking.Core.Tests` | Klopt het sensormodel? | `RESULTAAT: GESLAAGD`, zie [sensormodel.md](sensormodel.md) |
+| `tests/BinPicking.Core.Tests` | Kloppen het sensormodel en de pickpuntkeuze? | `RESULTAAT: GESLAAGD`, zie [sensormodel.md](sensormodel.md) |
 
 Open de scène in Godot, klik op de hamer en druk op F6. De resultaten staan in de Output.
 

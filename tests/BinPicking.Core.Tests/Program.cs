@@ -1,3 +1,4 @@
+using BinPicking.Core.Grasping;
 using BinPicking.Core.Sensing;
 
 // Eenvoudige tests zonder extra pakketten. Starten met:
@@ -46,8 +47,66 @@ catch (ArgumentException)
 }
 Check("Verkeerde beeldgrootte geeft een fout", threw);
 
+// Pickpunt zoeken. Beeld van 1,5 m hoogte op een vloer op 2 m, met een bak van +/- 0,4 m.
+var pickCamera = PinholeCamera.FromVerticalFov(400, 400, 30f);
+var bin = new BinRegion(-0.4f, 0.4f, -0.4f, 0.4f, 1.5f, 2.1f);
+var grasp = new GraspSettings { SearchStep = 3 };
+
+float[] Scene(float floor) { var d = new float[400 * 400]; Array.Fill(d, floor); return d; }
+void Box(float[] d, int x0, int y0, int x1, int y1, float z)
+{
+    for (int y = y0; y <= y1; y++) { for (int x = x0; x <= x1; x++) { d[y * 400 + x] = z; } }
+}
+var (noneFound, noneReport) = GraspPlanner.FindGrasps(pickCamera, Enumerable.Repeat(float.NaN, 160000).ToArray(), bin, grasp);
+Check("Zonder metingen is er geen pickpunt", noneFound.Count == 0 && noneReport.Evaluated == 0);
+
+float[] patch = Scene(2.05f);
+Box(patch, 150, 150, 250, 250, 1.8f);
+var (patchFound, _) = GraspPlanner.FindGrasps(pickCamera, patch, bin, grasp);
+GraspCandidate? top = patchFound.FirstOrDefault();
+Check("Hoog vlak wordt gekozen boven de vloer", top != null && MathF.Abs(top.Z - 1.8f) < 0.002f);
+Check("Het pickpunt ligt op het vlak", top != null && top.PixelX is >= 150 and <= 250 && top.PixelY is >= 150 and <= 250);
+Check("Perfecte diepte op dat vlak dicht volledig af", top != null && GraspPlanner.TrueSealShare(pickCamera, patch, top, grasp) > 0.99f);
+Check("Kandidaten liggen minstens een napbreedte uit elkaar", patchFound.Count > 1 && DistanceBetween(patchFound[0], patchFound[1]) >= 0.03f - 1e-4f);
+
+float[] tinyPatch = Scene(2.05f);
+Box(tinyPatch, 195, 195, 205, 205, 1.8f);
+var (tinyFound, _) = GraspPlanner.FindGrasps(pickCamera, tinyPatch, bin, grasp);
+Check("Een vlak kleiner dan de nap wordt niet gekozen", tinyFound.All(c => c.Z > 2f));
+
+float[] holey = Scene(1.9f);
+var holeRandom = new Random(3);
+for (int i = 0; i < holey.Length; i++) { if (holeRandom.NextDouble() < 0.97) { holey[i] = float.NaN; } }
+var (holeyFound, holeyReport) = GraspPlanner.FindGrasps(pickCamera, holey, bin, grasp);
+Check("Te weinig metingen geeft geen pickpunt", holeyFound.Count == 0 && holeyReport.TooFewPoints > 0);
+
+var noisy = Scene(1.9f);
+var noiseRandom = new Random(4);
+for (int i = 0; i < noisy.Length; i++) { noisy[i] += (float)(noiseRandom.NextDouble() - 0.5) * 0.04f; }
+var (noisyFound, noisyReport) = GraspPlanner.FindGrasps(pickCamera, noisy, bin, grasp);
+Check("Een ruw oppervlak geeft geen pickpunt", noisyFound.Count == 0 && noisyReport.NotFlat > 0);
+
+float[] steep = new float[400 * 400];
+for (int y = 0; y < 400; y++) { for (int x = 0; x < 400; x++) { steep[y * 400 + x] = 1.9f / (1f - 1.5f * (x + 0.5f - pickCamera.Cx) / pickCamera.Fx); } }
+var (steepFound, steepReport) = GraspPlanner.FindGrasps(pickCamera, steep, bin, grasp);
+Check("Een te schuin vlak wordt geweigerd", steepFound.Count == 0 && steepReport.TooTilted > 0);
+
+float[] walled = Scene(2.05f);
+Box(walled, 150, 150, 250, 250, 1.9f);
+Box(walled, 196, 150, 204, 250, 1.8f);
+var (walledFound, walledReport) = GraspPlanner.FindGrasps(pickCamera, walled, bin, new GraspSettings { SearchStep = 3, ToolDiameter = 0.09f });
+Check("De houder mag een hoger onderdeel niet raken", walledReport.ToolCollision > 0 && walledFound.All(c => c.Z < 1.85f || MathF.Abs(c.X) > 0.04f));
+
+float[] edge = Scene(1.9f);
+var smallBin = bin with { MinX = -0.02f, MaxX = 0.02f, MinY = -0.02f, MaxY = 0.02f };
+var (edgeFound, edgeReport) = GraspPlanner.FindGrasps(pickCamera, edge, smallBin, grasp);
+Check("Te dicht bij de wand wordt geweigerd", edgeFound.Count == 0 && edgeReport.OutsideOpening > 0);
+
 Console.WriteLine(failures == 0 ? "RESULTAAT: GESLAAGD" : $"RESULTAAT: {failures} TESTS MISLUKT");
 return failures == 0 ? 0 : 1;
+
+float DistanceBetween(GraspCandidate a, GraspCandidate b) =>
+    MathF.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y) + (a.Z - b.Z) * (a.Z - b.Z));
 
 void Check(string name, bool passed)
 {

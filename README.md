@@ -4,8 +4,8 @@ Een werkende, uitlegbare simulatie van bin picking met een zuignap: één zwart 
 een pallet vol dezelfde zwarte onderdelen. Het project gebruikt een igus-kabelrupsschakel als
 openbaar voorbeeld, en draait voorlopig volledig in simulatie.
 
-> Status: de CAD-stap, een pallet met 720 schakels en een dieptecamera met sensormodel werken. De
-> keuze van een pickpunt en de pick zelf moeten nog worden gebouwd. Zie
+> Status: de CAD-stap, een pallet met 720 schakels, een dieptecamera met sensormodel en de keuze van
+> een pickpunt werken. De pick zelf moet nog worden gebouwd. Zie
 > [docs/overdracht.md](docs/overdracht.md).
 
 ## Snel starten
@@ -38,6 +38,7 @@ openbaar voorbeeld, en draait voorlopig volledig in simulatie.
 | [docs/cad-pijplijn.md](docs/cad-pijplijn.md) | Hoe van een STEP-bestand een bruikbare schakel wordt |
 | [docs/bak.md](docs/bak.md) | Hoe de pallet is opgebouwd en gevuld, en de bediening |
 | [docs/sensormodel.md](docs/sensormodel.md) | Hoe de virtuele camera zwarte onderdelen meet |
+| [docs/pickpunt.md](docs/pickpunt.md) | Hoe een pickpunt wordt gekozen en gecontroleerd |
 | [docs/testen.md](docs/testen.md) | Welke tests er zijn, hoe je ze leest en wat ze opleverden |
 | [docs/overdracht.md](docs/overdracht.md) | Status, gemaakte keuzes, open punten en volgende stappen |
 
@@ -47,7 +48,7 @@ openbaar voorbeeld, en draait voorlopig volledig in simulatie.
 |---|---|---|
 | `godot/` | Godot-project met de testscènes | Ja |
 | `godot/generated/` | Gegenereerde meshes uit het igus-model | Nee |
-| `src/BinPicking.Core/` | Algoritmes zonder Godot, nu het sensormodel | Ja |
+| `src/BinPicking.Core/` | Algoritmes zonder Godot: sensormodel en pickpunt | Ja |
 | `tests/BinPicking.Core.Tests/` | Tests van die algoritmes | Ja |
 | `tools/cad_pipeline/` | Scripts van STEP naar Godot | Ja |
 | `cad/` | Het gedownloade igus-model | Nee |

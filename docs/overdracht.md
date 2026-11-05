@@ -22,7 +22,7 @@ diepte -> puntenwolk -> bakfilter -> vlakke kandidaten -> afdichtingsscore
 | 1 | CAD naar Godot, stabiel vallende schakels | Klaar, test op Windows nog uitvoeren |
 | 2 | Pallet met 720 schakels | Werkt en is opgeslagen; nog geen physics na het laden |
 | 3 | Dieptecamera en sensormodel | Werkt; waarden zijn illustratief, nog niet op Windows getest |
-| 4 | Eerste pick met zuignap | Nog niet begonnen |
+| 4 | Eerste pick met zuignap | Pickpunt wordt gekozen; de pick zelf ontbreekt nog |
 | 5 | Foutgevallen en statistieken | Nog niet begonnen |
 | 6 | Positiebepaling met CAD-model | Nog niet begonnen |
 | 7 | Robot en publicatie | Nog niet begonnen |
@@ -51,5 +51,5 @@ diepte -> puntenwolk -> bakfilter -> vlakke kandidaten -> afdichtingsscore
 
 ## Volgende stap
 
-Maak van de gemeten diepte een puntenwolk, zoek vlakke kandidaten die groot genoeg zijn voor de zuignap en
-kies een pickpunt. Daarna volgt de eerste pick.
+Voer de pick echt uit: laat rond het pickpunt schakels meebewegen, breng de zuignap aan, controleer de
+afdichting en til op. Daarna kunnen meerdere picks achter elkaar en de statistieken uit fase 5.

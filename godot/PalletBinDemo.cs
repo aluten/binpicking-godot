@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BinPicking.Core.Grasping;
 using BinPicking.Core.Sensing;
 using Godot;
 
@@ -48,6 +49,7 @@ public partial class PalletBinDemo : Node3D
 	private const float RimHalfViewMeters = 0.47f;
 	private const float PartReflectanceLimit = 0.2f;
 	private const float LightPartReflectance = 0.5f;
+	private const float GoodSealShare = 0.9f;
 
 	private static readonly Color WoodColor = new(0.72f, 0.56f, 0.36f);
 	private static readonly Color MetalColor = new(0.55f, 0.57f, 0.6f);
@@ -552,7 +554,8 @@ public partial class PalletBinDemo : Node3D
 		{
 			Text = "Muis: slepen = draaien, middelste knop = verschuiven, wiel = zoomen\n" +
 				   "1 = overzicht, 2 = vanaf de sensor, 3 = dichtbij, R = opnieuw vullen\n" +
-				   "4 = 3D / perfecte diepte / sensor, B = zwarte of lichte schakels",
+				   "4 = 3D / perfecte diepte / sensor, B = zwarte of lichte schakels\n" +
+				   "Groen = beste pickpunt, blauw = andere kandidaten",
 		});
 	}
 
@@ -606,10 +609,14 @@ public partial class PalletBinDemo : Node3D
 		DepthSensorResult result = DepthSensorModel.Apply(camera, _idealDepth, _projectorDepth, reflectance, _sensorSettings);
 		ReportSensor(result, reflectance);
 		_sensorResult = result;
+		FindGrasps(result);
 		UpdateSensorView();
 	}
 
 	private DepthSensorResult? _sensorResult;
+	private readonly GraspSettings _graspSettings = new();
+	private List<GraspCandidate> _grasps = new();
+	private readonly List<Node3D> _graspMarkers = new();
 
 	private void ReportSensor(DepthSensorResult result, float[] reflectance)
 	{
@@ -654,6 +661,118 @@ public partial class PalletBinDemo : Node3D
 		_status.Text = text;
 	}
 
+	private void FindGrasps(DepthSensorResult result)
+	{
+		PinholeCamera camera = _rig!.Camera;
+		// De bak vanuit de camera; camera-Y wijst naar wereld-Z.
+		var bin = new BinRegion(
+			-InnerLength / 2f, InnerLength / 2f, -InnerWidth / 2f, InnerWidth / 2f,
+			SensorAboveRim - 0.05f, SensorAboveRim + RimHeight);
+
+		ulong started = Time.GetTicksMsec();
+		(_grasps, GraspSearchReport report) = GraspPlanner.FindGrasps(camera, result.Depth, bin, _graspSettings);
+		ulong milliseconds = Time.GetTicksMsec() - started;
+
+		GD.Print($"INFO Pickpunten: {report.Evaluated} beoordeeld in {milliseconds} ms; " +
+				 $"te weinig metingen {report.TooFewPoints}, niet vlak {report.NotFlat}, te schuin {report.TooTilted}, " +
+				 $"houder raakt {report.ToolCollision}, buiten opening {report.OutsideOpening}, goed {report.Accepted}");
+
+		if (_grasps.Count == 0)
+		{
+			GD.Print("INFO Geen pickpunt gevonden.");
+			_status.Text += "\nGeen pickpunt gevonden";
+		}
+		else
+		{
+			GraspCandidate best = _grasps[0];
+			float bestSeal = GraspPlanner.TrueSealShare(camera, _idealDepth, best, _graspSettings);
+			int good = _grasps.Count(g => GraspPlanner.TrueSealShare(camera, _idealDepth, g, _graspSettings) >= GoodSealShare);
+			GD.Print($"INFO Beste pickpunt: {best.ValidShare * 100f:F0}% gemeten, {best.InlierShare * 100f:F0}% in het vlak, " +
+					 $"{best.TiltDegrees:F0} graden schuin; werkelijke afdichting {bestSeal * 100f:F0}%");
+			GD.Print($"INFO Controle met perfecte diepte: {good} van de {_grasps.Count} beste kandidaten dichten minstens " +
+					 $"{GoodSealShare * 100f:F0}% af");
+			_status.Text += $"\nPickpunt: werkelijke afdichting {bestSeal * 100f:F0}%; " +
+							$"{good} van {_grasps.Count} kandidaten goed";
+		}
+
+		ShowGraspMarkers();
+	}
+
+	private void ShowGraspMarkers()
+	{
+		foreach (Node3D marker in _graspMarkers)
+		{
+			marker.QueueFree();
+		}
+		_graspMarkers.Clear();
+
+		for (int i = 0; i < _grasps.Count; i++)
+		{
+			GraspCandidate grasp = _grasps[i];
+			bool best = i == 0;
+			// Camera-X = wereld-X, camera-Y = wereld-Z, camera-Z wijst omlaag.
+			float height = RimHeight + SensorAboveRim;
+			var point = new Vector3(grasp.X, height - grasp.Z, grasp.Y);
+			var normal = new Vector3(grasp.NormalX, -grasp.NormalZ, grasp.NormalY).Normalized();
+			Color color = best ? new Color(0.1f, 1f, 0.2f) : new Color(0.1f, 0.8f, 1f);
+			var material = new StandardMaterial3D
+			{
+				AlbedoColor = color,
+				ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			};
+
+			var marker = new Node3D { Position = point };
+			Vector3 helper = Mathf.Abs(normal.Dot(Vector3.Forward)) > 0.9f ? Vector3.Right : Vector3.Forward;
+			Vector3 x = helper.Cross(normal).Normalized();
+			marker.Basis = new Basis(x, normal, x.Cross(normal));
+			float radius = _graspSettings.CupDiameter / 2f;
+			float stem = best ? 0.25f : 0.06f;
+			marker.AddChild(new MeshInstance3D
+			{
+				Mesh = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 0.003f, Material = material },
+				Position = Vector3.Up * 0.003f,
+				Layers = 1u << (DepthSensorRig.ModelLayer - 1),
+				CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+			});
+			marker.AddChild(new MeshInstance3D
+			{
+				Mesh = new CylinderMesh { TopRadius = 0.003f, BottomRadius = 0.003f, Height = stem, Material = material },
+				Position = Vector3.Up * stem / 2f,
+				Layers = 1u << (DepthSensorRig.ModelLayer - 1),
+				CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+			});
+			AddChild(marker);
+			_graspMarkers.Add(marker);
+		}
+	}
+
+	private void DrawGraspsOnImage(byte[] pixels, int width, int height)
+	{
+		for (int i = _grasps.Count - 1; i >= 0; i--)
+		{
+			GraspCandidate grasp = _grasps[i];
+			(byte r, byte g, byte b) = i == 0 ? ((byte)20, (byte)255, (byte)40) : ((byte)30, (byte)210, (byte)255);
+			float radius = _rig!.Camera.Fx * (_graspSettings.CupDiameter / 2f) / grasp.Z;
+			int steps = 128;
+			for (int s = 0; s < steps; s++)
+			{
+				float angle = s * Mathf.Tau / steps;
+				for (float extra = 0f; extra < (i == 0 ? 3f : 2f); extra += 1f)
+				{
+					int x = grasp.PixelX + Mathf.RoundToInt((radius + extra) * Mathf.Cos(angle));
+					int y = grasp.PixelY + Mathf.RoundToInt((radius + extra) * Mathf.Sin(angle));
+					if (x >= 0 && y >= 0 && x < width && y < height)
+					{
+						int at = (y * width + x) * 3;
+						pixels[at] = r;
+						pixels[at + 1] = g;
+						pixels[at + 2] = b;
+					}
+				}
+			}
+		}
+	}
+
 	private void CycleSensorView()
 	{
 		if (_rig == null || _sensorResult == null)
@@ -676,6 +795,7 @@ public partial class PalletBinDemo : Node3D
 		{
 			byte[] pixels = _viewMode == 1 ? DrawDepth(_idealDepth, null) : DrawDepth(_sensorResult.Depth, _sensorResult.Missing);
 			PinholeCamera camera = _rig.Camera;
+			DrawGraspsOnImage(pixels, camera.Width, camera.Height);
 			Image image = Image.CreateFromData(camera.Width, camera.Height, false, Image.Format.Rgb8, pixels);
 			_sensorView.Texture = ImageTexture.CreateFromImage(image);
 		}
@@ -729,6 +849,15 @@ public partial class PalletBinDemo : Node3D
 		else if (view == "3")
 		{
 			_camera.SetView(new Vector3(0f, RimHeight - 0.05f, 0f), 30f, 45f, 1.1f);
+		}
+		else if (view == "pick")
+		{
+			GraspCandidate? best = _grasps.FirstOrDefault();
+			if (best != null)
+			{
+				float height = RimHeight + SensorAboveRim;
+				_camera.SetView(new Vector3(best.X, height - best.Z, best.Y), 30f, 55f, 0.8f);
+			}
 		}
 		else if (view == "ideaal" || view == "sensor" || view == "licht")
 		{
