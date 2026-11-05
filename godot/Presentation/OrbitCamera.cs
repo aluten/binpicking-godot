@@ -3,6 +3,8 @@ using Godot;
 /// <summary>
 /// Camera that orbits a point with the mouse.
 /// The left or right button rotates, the middle button pans and the wheel zooms.
+/// A view can have a separate zoom focus: the orbit point moves towards it while zooming in, so an
+/// overview can frame a large scene while zooming still ends at the point of interest.
 /// </summary>
 public partial class OrbitCamera : Camera3D
 {
@@ -13,17 +15,32 @@ public partial class OrbitCamera : Camera3D
 	private const float MinDistance = 0.3f;
 	private const float MaxDistance = 10f;
 
-	private Vector3 _target;
+	private Vector3 _viewTarget;
+	private Vector3 _zoomFocus;
+	private float _viewDistance;
+	private Vector3 _pan;
 	private float _yawDegrees;
 	private float _pitchDegrees;
 	private float _distance;
 
-	public void SetView(Vector3 target, float yawDegrees, float pitchDegrees, float distance)
+	/// <param name="zoomFocus">Where zooming in ends. Defaults to the target.</param>
+	public void SetView(Vector3 target, float yawDegrees, float pitchDegrees, float distance, Vector3? zoomFocus = null)
 	{
-		_target = target;
+		_viewTarget = target;
+		_zoomFocus = zoomFocus ?? target;
+		_viewDistance = distance;
+		_pan = Vector3.Zero;
 		_yawDegrees = yawDegrees;
 		_pitchDegrees = pitchDegrees;
 		_distance = distance;
+		ApplyView();
+	}
+
+	/// <summary>Zooms in for positive steps and out for negative steps, as one wheel click per step.</summary>
+	public void Zoom(int steps)
+	{
+		float factor = Mathf.Pow(ZoomFactor, steps);
+		_distance = Mathf.Clamp(_distance / factor, MinDistance, MaxDistance);
 		ApplyView();
 	}
 
@@ -38,16 +55,14 @@ public partial class OrbitCamera : Camera3D
 				break;
 			case InputEventMouseMotion motion when (motion.ButtonMask & MouseButtonMask.Middle) != 0:
 				float scale = _distance * 0.0015f;
-				_target += GlobalBasis * new Vector3(-motion.Relative.X, motion.Relative.Y, 0f) * scale;
+				_pan += GlobalBasis * new Vector3(-motion.Relative.X, motion.Relative.Y, 0f) * scale;
 				ApplyView();
 				break;
 			case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.WheelUp }:
-				_distance = Mathf.Max(_distance / ZoomFactor, MinDistance);
-				ApplyView();
+				Zoom(1);
 				break;
 			case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.WheelDown }:
-				_distance = Mathf.Min(_distance * ZoomFactor, MaxDistance);
-				ApplyView();
+				Zoom(-1);
 				break;
 		}
 	}
@@ -55,6 +70,7 @@ public partial class OrbitCamera : Camera3D
 	private void ApplyView()
 	{
 		Rotation = new Vector3(-Mathf.DegToRad(_pitchDegrees), Mathf.DegToRad(_yawDegrees), 0f);
-		Position = _target + Basis.Z * _distance;
+		float zoomedOut = Mathf.Clamp(_distance / _viewDistance, 0f, 1f);
+		Position = _zoomFocus.Lerp(_viewTarget, zoomedOut) + _pan + Basis.Z * _distance;
 	}
 }

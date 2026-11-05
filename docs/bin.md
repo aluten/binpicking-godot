@@ -24,7 +24,7 @@ changes for the vision problem. The number is `FullBinLinks` in `BinFiller`.
 |---|---|
 | Drag with the left or right mouse button | Rotate |
 | Drag with the middle mouse button | Pan |
-| Mouse wheel | Zoom |
+| Mouse wheel | Zoom; in the overview, zooming in ends inside the bin |
 | 1 / 2 / 3 | Overview / from the sensor / close-up |
 | 4 | 3D / perfect depth / sensor |
 | B | Black or light links |

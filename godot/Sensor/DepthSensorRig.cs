@@ -56,7 +56,7 @@ void fragment() {
         _albedo = AddView(position, verticalFovDegrees, depthPass: false);
         _albedo.DebugDraw = Viewport.DebugDrawEnum.Unshaded;
 
-        AddBodyModel(position, projectorBaseline);
+        AddChild(new SensorRigModel(Camera, position, projectorBaseline, SensorMount.AboveRim));
     }
 
     /// <summary>Renders once and returns depth from camera and projector, and the reflectance.</summary>
@@ -129,19 +129,6 @@ void fragment() {
             });
         }
         return viewport;
-    }
-
-    private void AddBodyModel(Vector3 position, float baseline)
-    {
-        // Only visible to the overview camera, not to the sensor itself.
-        var material = new StandardMaterial3D { AlbedoColor = new Color(0.15f, 0.3f, 0.5f) };
-        AddChild(new MeshInstance3D
-        {
-            Mesh = new BoxMesh { Size = new Vector3(baseline + 0.08f, 0.06f, 0.08f), Material = material },
-            Position = position + new Vector3(baseline / 2f, 0.04f, 0f),
-            Layers = 1u << (ModelLayer - 1),
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-        });
     }
 
     private static float[] ReadDepth(Image image)

@@ -210,7 +210,7 @@ public partial class PalletBinDemo : Node3D
 		ShowOverview();
 	}
 
-	private void ShowOverview() => _camera.SetView(new Vector3(0f, 0.5f, 0f), 28f, 55f, 2.8f);
+	private void ShowOverview() => _camera.SetView(new Vector3(0f, 1.75f, 0f), -28f, 35f, 5.2f, zoomFocus: new Vector3(0f, 0.5f, 0f));
 
 	private void ShowFromSensor() => _camera.SetView(new Vector3(0f, RimHeight, 0f), 0f, 90f, SensorMount.AboveRim - 0.03f);
 
@@ -246,6 +246,12 @@ public partial class PalletBinDemo : Node3D
 				break;
 			case "close":
 				ShowCloseUp();
+				break;
+			case "zoom-half":
+				_camera.Zoom(8);
+				break;
+			case "zoom-max":
+				_camera.Zoom(40);
 				break;
 			case "candidates":
 				NextPickMode();

@@ -56,6 +56,7 @@ the same algorithms.
 | | `BinFillInspector` | Checks a fill geometrically |
 | `Links` | `LinkAssets` | Loads the generated link files |
 | `Sensor` | `DepthSensorRig` | Renders perfect depth and reflectance |
+| | `SensorRigModel` | Shows the named camera and projector in the overview |
 | | `SensorMount` | Sensor position and the camera-to-world mapping |
 | | `SensorMeasurement` | Applies the sensor model to a capture |
 | | `SensorImage` | Draws depth as an image |

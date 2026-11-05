@@ -10,6 +10,9 @@ A structured-light camera projects a pattern and derives depth from how the patt
 if both camera and projector can see it and enough of the pattern returns
 ([Pickit](https://docs.pickit3d.com/en/3.5/faq/hardware/how-does-the-camera-work.html)).
 
+The Pickit page only serves as an accessible explanation of the principle. This project does not model a Pickit
+camera. See [sensor-model.md](sensor-model.md#camera-setup) for the setup that is simulated.
+
 | Colour | Meaning | Idea |
 |---|---|---|
 | Magenta | Low light | Black and oblique surfaces return less, and distance weakens the signal |
