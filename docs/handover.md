@@ -22,7 +22,7 @@ depth -> point cloud -> bin filter -> flat candidates -> sealing score
 | 2 | Pallet with 720 links | Works and is stored; no physics after loading yet |
 | 3 | Depth camera and sensor model | Works; values are illustrative |
 | 4 | First pick with suction cup | Works in simulation; see [picking.md](picking.md) |
-| 5 | Failure cases and statistics | Outcomes and a series of 10 work; physics artefacts must be reduced before the numbers mean much |
+| 5 | Failure cases and statistics | Outcomes and series work; artefacts are reduced but not gone |
 | 6 | Pose estimation with the CAD model | Not started |
 | 7 | Robot and publication | Not started |
 
@@ -54,5 +54,5 @@ depth -> point cloud -> bin filter -> flat candidates -> sealing score
 
 ## Next step
 
-Reduce the physics artefacts when links are released, and then run many picks over several fills. Only then does a
-success rate mean something, and can the middle requirement be compared with a run without it.
+Find out why links are lost after lifting begins, then run many picks over several fills. Only then does a success rate
+mean something, and can the middle requirement be compared with a run without it.

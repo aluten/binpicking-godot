@@ -29,6 +29,7 @@ changes for the vision problem. The number is `FullBinLinks` in `BinFiller`.
 | 4 | 3D / perfect depth / sensor |
 | B | Black or light links |
 | G / A | Perform one pick / 10 picks in a row |
+| H, or click the legend button | Show or hide the legend |
 | R | Empty and fill the bin; press R again to stop at that height |
 | P | Show candidates; again: show the choice; again: hide |
 
@@ -61,4 +62,4 @@ A stored fill is drawn by `BinFillView` with a `MultiMesh`: one mesh drawn 720 t
 - The planks and corners are simple boxes; the exact shape was not measured.
 - The mass of 0.15 kg per link is an assumption.
 - A stored fill has no physics yet. That comes with the pick.
-- The fill height varied between 774 and 1004 mm across all trial runs with different settings.
+- The fill height varied between 774 and 1062 mm across all trial runs with different settings.

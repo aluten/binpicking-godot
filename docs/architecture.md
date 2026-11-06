@@ -71,9 +71,9 @@ the same algorithms.
 | | `GraspMarkers` | Shows pick points in 3D |
 | | `GraspImageOverlay` | Shows pick points on a sensor image |
 | | `PickDisplayMode` | The display steps |
-| `Presentation` | `OrbitCamera`, `DemoHud`, `DemoEnvironment` | Camera, on-screen text, lights and ground |
+| `Presentation` | `OrbitCamera`, `DemoHud`, `DemoEnvironment` | Camera, status at the top centre and collapsible legend at the bottom left, lights and ground |
 | `Demo` | `PalletBinDemo` | Composition root: connects the modules and handles the keys |
-| `Tests` | `DepthTest`, `LinkPhysicsTest` | Scripts of the test scenes |
+| `Tests` | `DepthTest`, `LinkPhysicsTest`, `ReleaseStabilityTest` | Scripts of the test scenes |
 | `Scenes` | `*.tscn` | The scenes to start |
 
 ## Where does new code go?

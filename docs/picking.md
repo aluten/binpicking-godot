@@ -46,24 +46,32 @@ The vacuum is not a rigid attachment. `VacuumHold` applies limited force and tor
 
 ## Result
 
-Ten picks in a row from the full reference fill, on the Linux cloud computer with a software renderer:
+Series from the full reference fill, on the Linux cloud computer with a software renderer:
 
-| Measurement | Result |
-|---|---|
-| Placed | 7 of 10 |
-| No seal | 0 |
-| Lost during lift | 3 |
-| Picks with links pulled along (rise above 20 mm) | 3 |
-| Links disturbed per pick (moved above 5 mm) | 10.5 on average, from 0 to 32 |
+| Measurement | Before artefact work (10 picks) | Now (20 picks) |
+|---|---:|---:|
+| Placed | 7 of 10 | 12 of 20 |
+| No seal | 0 | 1 |
+| Lost during lift or carry | 3 | 7 |
+| Lost before lifting began | Not measured | 0 |
+| Links disturbed per pick, on average | 10.5 | 6.2 |
+| Links moved before lifting began, on average | Not measured | 2.8 |
+| Picks with links pulled along | 3 | 0 |
 
-**This is no reliable success rate.** It is one fill and ten picks, and other versions of the same model gave 6 and 8 of
-10 before they were corrected.
+**This is no reliable success rate:** it is one fill and one seed. Both series are too small and use different fills, so
+the difference between them means little.
+
+`MovedBeforeLift` separates artefacts from effects of the pick: nothing has pulled on a link before lifting starts, so
+any movement then comes from the simulation. It is smaller now, but not zero.
 
 ## Known limitations
 
-- **Physics artefacts.** Restored links overlap slightly and jump when released. This is why they start damped, but it
-  did not fully solve it: losses often come with many disturbed links. Part of the losses and disturbance can therefore
-  be caused by the simulation and not by real hooking.
+- **Physics artefacts.** Restored links overlap slightly and can jump when released. A lower position correction, a new
+  fill and damping reduce this, but 2.8 links per pick still move before lifting. See
+  [testing.md](testing.md#physics-artefacts).
+- **The cause of the losses is not established.** All 7 occurred after lifting began, without links being pulled along
+  noticeably. They may be real jamming in the model, but links outside the moving zone are immovable, which can make
+  jamming worse than in reality.
 - **The tool does not push during descent**, because the links are still frozen then. Contact is therefore not simulated
   until the part is lifted.
 - **The tool moves in straight lines**, without a robot, joint limits or acceleration.

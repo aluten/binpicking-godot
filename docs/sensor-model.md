@@ -88,9 +88,9 @@ Rendered with a software renderer on the Linux cloud computer:
 
 | Links | Without measurement | Low light | Shadow | Edge | Noise |
 |---|---:|---:|---:|---:|---:|
-| Black | 67% | 54% | 7% | 5% | 0.6 mm |
-| Light | 14% | 1% | 7% | 5% | 0.4 mm |
+| Black | 57% | 43% | 8% | 5% | 0.5 mm |
+| Light | 15% | 1% | 8% | 5% | 0.3 mm |
 
-Wood and background: 3% without measurement. Because of rounding, the percentages do not always add up exactly.
+Wood and background: 4% without measurement. These depend on the fill: a higher pile is closer to the camera and returns more light. Because of rounding, the percentages do not always add up exactly.
 Flat surfaces facing the camera keep the most measurements, and those are exactly the surfaces a suction cup
 fits on.

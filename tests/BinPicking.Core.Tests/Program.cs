@@ -140,6 +140,11 @@ pickStats.Add(new PickResult(PickOutcome.NoSeal, 0.5f, 3, 4, 0.01f));
 Check("Statistics count outcomes", pickStats.Attempts == 2 && pickStats.Placed == 1 && pickStats.Count(PickOutcome.NoSeal) == 1);
 Check("Statistics give the success rate", Math.Abs(pickStats.SuccessRate - 0.5) < 1e-9 && pickStats.WithPulledAlong == 1 && Math.Abs(pickStats.AverageDisturbed - 3.0) < 1e-9);
 
+var artefactStats = new PickStatistics();
+artefactStats.Add(new PickResult(PickOutcome.LostDuringLift, 1f, 0, 8, 0f, MovedBeforeLift: 6, LostBeforeLift: true));
+artefactStats.Add(new PickResult(PickOutcome.Placed, 1f, 0, 1, 0f, MovedBeforeLift: 0));
+Check("Statistics separate artefacts from real losses", artefactStats.LostBeforeLift == 1 && Math.Abs(artefactStats.AverageMovedBeforeLift - 3.0) < 1e-9);
+
 var splitStats = DepthSensorStatistics.Compute(shadowed, scene, i => i % 2 == 0);
 Check("Statistics split all pixels into parts and others",
     splitStats.PartPixels + splitStats.OtherPixels == scene.Length && splitStats.PartMissing <= splitStats.PartPixels);

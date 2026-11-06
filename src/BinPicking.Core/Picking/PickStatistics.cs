@@ -15,6 +15,10 @@ public sealed class PickStatistics
 
     public double AverageDisturbed => Attempts == 0 ? 0.0 : _results.Average(r => r.Disturbed);
 
+    public int LostBeforeLift => _results.Count(r => r.LostBeforeLift);
+
+    public double AverageMovedBeforeLift => Attempts == 0 ? 0.0 : _results.Average(r => r.MovedBeforeLift);
+
     public void Add(PickResult result) => _results.Add(result);
 
     public int Count(PickOutcome outcome) => _results.Count(r => r.Outcome == outcome);

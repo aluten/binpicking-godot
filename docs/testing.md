@@ -5,6 +5,7 @@
 | `Scenes/depth_test.tscn` | Does depth arrive accurately in C#? | Three measurements deviate at most 1 mm |
 | `Scenes/link_physics_test.tscn` | Do import, scale and stacking work? | No line with `FOUT` |
 | `Scenes/pallet_bin.tscn` | Does the fill fit and is the sensor distance right? | No line with `FOUT` |
+| `Scenes/release_stability_test.tscn` | How much do links move when released, without a pick? | Information; see below |
 | `tests/BinPicking.Core.Tests` | Are the sensor model, pick search and pick model correct? | `RESULT: PASSED` |
 
 For a scene: open it in Godot, click the hammer and press F6. Results appear in the Output panel, in Dutch: `OK`
@@ -50,14 +51,19 @@ The Jolt defaults suit game objects, not parts of a few centimetres. `project.go
 |---|---|---:|
 | `penetration_slop` | 0.02 m | 0.0005 m |
 | `speculative_contact_distance` | 0.02 m | 0.002 m |
+| `baumgarte_stabilization_factor` | 0.2 | 0.05 |
 
 With the defaults the model sank up to 20.3 mm into the floor, which makes stacking and hooking unreliable. A
 floor of 5 cm also proved too weak: a link was once pushed through it. The floor is therefore 50 cm thick and the
 walls are 30 cm in this test.
 
+The lower `baumgarte_stabilization_factor` pushes overlapping links apart more gently. See
+[Physics artefacts](#physics-artefacts). With this setting, seed 1 gives 3.6 mm in the floor, so the margin to the
+4 mm limit is small.
+
 ### Results
 
-Measured with Godot 4.7.2 without a display on a Linux cloud computer:
+Measured with Godot 4.7.2 without a display on a Linux cloud computer, before that last setting was added:
 
 | Seed | To rest | In the floor | Physics avg. / max | Moved of 29 | Highest rise |
 |---|---|---|---|---|---|
@@ -83,8 +89,24 @@ Timings differ between runs, so do not compare single measurements.
 | Afstand tot de rand | Does the sensor measure the known distance to the rim? |
 | Hoogste punt | How full is the bin? This is information, not a requirement |
 
-The full reference fill, made on the Linux cloud computer: 720 links, 2.8 mm in the wall, 2.8 mm in the floor,
-highest point at 962 mm, inside the 1000 mm rim. Overlap between links is not measured yet.
+The full reference fill, made on the Linux cloud computer with the current settings: 720 links, 2.6 mm in the wall,
+2.9 mm in the floor and the highest point at 1062 mm, so 7 links stick out above the 1000 mm rim. Overlap between links
+is not measured yet.
+
+## Physics artefacts
+
+`release_stability_test.tscn` releases the links around 8 high points without touching anything. A stable pile hardly
+moves, so movement here comes from the simulation.
+
+| Situation | Moved over 5 mm, on average | Largest movement |
+|---|---:|---:|
+| Old fill, old settings | 6.5 of 16 links | 68.8 mm |
+| Old fill, lower correction | 3.4 of 16 links | 33.7 mm |
+| **New fill, lower correction** | **0.5 of 16 links** | **7.6 mm** |
+
+Also tried and rejected: limiting the maximum speed (no effect), and letting the whole top of the bin come to rest first
+(no better, and at larger depths links were flung metres away). A fill must be made with these settings to benefit, so an
+older fill should be replaced by pressing R. The test only covers high points, so it says little about deep in the pile.
 
 ## After the refactor
 

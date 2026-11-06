@@ -90,6 +90,9 @@ public partial class PalletBinDemo : Node3D
 			case Key.Key3:
 				ShowCloseUp();
 				break;
+			case Key.H:
+				_hud.ToggleLegend();
+				break;
 			case Key.Key4:
 				NextSensorView();
 				break;
@@ -288,7 +291,8 @@ public partial class PalletBinDemo : Node3D
 		_lastPickSummary = $"Pick {_statistics.Attempts}: {DescribeOutcome(result.Outcome)}, contactring {result.RingShare * 100f:F0}%; " +
 						   $"{_statistics.Placed} van {_statistics.Attempts} geplaatst";
 		GD.Print($"INFO Pick {_statistics.Attempts}: {DescribeOutcome(result.Outcome)}; contactring {result.RingShare * 100f:F0}%, " +
-				 $"{result.CenterOffset * 1000f:F0} mm uit het midden, meegetrokken {result.PulledAlong}, verstoord {result.Disturbed}");
+				 $"{result.CenterOffset * 1000f:F0} mm uit het midden, meegetrokken {result.PulledAlong}, verstoord {result.Disturbed}; vóór het tillen bewogen {result.MovedBeforeLift}" +
+				 (result.LostBeforeLift ? ", verloren vóór het tillen" : string.Empty));
 
 		_cycle!.QueueFree();
 		_cycle = null;
@@ -326,7 +330,8 @@ public partial class PalletBinDemo : Node3D
 				 $"({_statistics.SuccessRate * 100.0:F0}%); geen afdichting {_statistics.Count(PickOutcome.NoSeal)}, " +
 				 $"verloren tijdens tillen {_statistics.Count(PickOutcome.LostDuringLift)}, " +
 				 $"geen schakel {_statistics.Count(PickOutcome.NoPartAtPoint)}; met meegetrokken schakels {_statistics.WithPulledAlong}, " +
-				 $"gemiddeld {_statistics.AverageDisturbed:F1} verstoord");
+				 $"gemiddeld {_statistics.AverageDisturbed:F1} verstoord; schijnbewegingen: gemiddeld {_statistics.AverageMovedBeforeLift:F1} bewogen vóór het tillen, " +
+				 $"{_statistics.LostBeforeLift} verloren vóór het tillen");
 	}
 
 	private static string DescribeOutcome(PickOutcome outcome) => outcome switch
@@ -428,6 +433,9 @@ public partial class PalletBinDemo : Node3D
 				break;
 			case "close":
 				ShowCloseUp();
+				break;
+			case "legend":
+				_hud.ToggleLegend();
 				break;
 			case "zoom-half":
 				_camera.Zoom(8);

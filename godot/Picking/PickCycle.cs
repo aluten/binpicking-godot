@@ -61,6 +61,8 @@ public partial class PickCycle : Node3D
     private int _pulledAlong;
     private double _settleSeconds;
     private double _engageSeconds;
+    private int _movedBeforeLift;
+    private bool _lostBeforeLift;
     private PickOutcome _outcome;
     private readonly List<Vector3> _carryPath = new();
 
@@ -122,7 +124,13 @@ public partial class PickCycle : Node3D
                 _engageSeconds += delta;
                 if (_stage == Stage.Engage && _engageSeconds >= EngageSeconds)
                 {
+                    CountMovedBeforeLift();
                     StartLift();
+                }
+                else if (_stage != Stage.Engage)
+                {
+                    CountMovedBeforeLift();
+                    _lostBeforeLift = true;
                 }
                 break;
             case Stage.Lift:
@@ -222,6 +230,11 @@ public partial class PickCycle : Node3D
         _tool.AddCollisionExceptionWith(link);
         _hold = new VacuumHold(link, _tool.GlobalTransform, _cup);
         _stage = Stage.Engage;
+    }
+
+    private void CountMovedBeforeLift()
+    {
+        _movedBeforeLift = _region.Active.Keys.Count(i => i != _target && _region.MovedDistance(i) > DisturbedDistance);
     }
 
     private void StartLift()
@@ -327,7 +340,7 @@ public partial class PickCycle : Node3D
             }
         }
 
-        var result = new PickResult(_outcome, _ringShare, _pulledAlong, disturbed, _grasp.CenterOffset);
+        var result = new PickResult(_outcome, _ringShare, _pulledAlong, disturbed, _grasp.CenterOffset, _movedBeforeLift, _lostBeforeLift);
         Finished?.Invoke(result, remaining, placed);
     }
 }

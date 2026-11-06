@@ -12,9 +12,10 @@ using static PalletDimensions;
 /// </summary>
 public partial class PickRegion : Node3D
 {
-    private const float ActiveRadius = 0.25f;
-    private const float ActiveDepth = 0.15f;
-    private const float SupportRadius = 0.55f;
+    public const float DefaultActiveRadius = 0.25f;
+    public const float DefaultActiveDepth = 0.15f;
+    public const float DefaultSupportRadius = 0.55f;
+
     private const float LinkMassKg = 0.15f; // Assumption, not an igus value.
     private const float WallThickness = 0.3f;
     private const float ReleaseDamping = 30f;
@@ -23,9 +24,22 @@ public partial class PickRegion : Node3D
     private readonly List<(Shape3D Shape, Transform3D Offset)> _shapes;
     private readonly Mesh _mesh;
     private readonly Vector3 _pickPoint;
+    private readonly float _activeRadius;
+    private readonly float _activeDepth;
+    private readonly float _supportRadius;
 
-    public PickRegion(IReadOnlyList<Transform3D> transforms, Mesh mesh, List<(Shape3D Shape, Transform3D Offset)> shapes, Vector3 pickPoint)
+    public PickRegion(
+        IReadOnlyList<Transform3D> transforms,
+        Mesh mesh,
+        List<(Shape3D Shape, Transform3D Offset)> shapes,
+        Vector3 pickPoint,
+        float activeRadius = DefaultActiveRadius,
+        float activeDepth = DefaultActiveDepth,
+        float supportRadius = DefaultSupportRadius)
     {
+        _activeRadius = activeRadius;
+        _activeDepth = activeDepth;
+        _supportRadius = supportRadius;
         _start = transforms;
         _mesh = mesh;
         _shapes = shapes;
@@ -45,11 +59,11 @@ public partial class PickRegion : Node3D
         {
             Vector3 origin = _start[i].Origin;
             float distance = new Vector2(origin.X - _pickPoint.X, origin.Z - _pickPoint.Z).Length();
-            if (distance > SupportRadius)
+            if (distance > _supportRadius)
             {
                 continue;
             }
-            bool active = distance <= ActiveRadius && origin.Y >= _pickPoint.Y - ActiveDepth;
+            bool active = distance <= _activeRadius && origin.Y >= _pickPoint.Y - _activeDepth;
             Node3D body = active ? CreateActive(i) : CreateSupport(i);
             AddChild(body);
             Included.Add(i);

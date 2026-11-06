@@ -46,21 +46,20 @@ With key R you can make a lower fill and compare.
 
 On the Linux cloud computer, with fixed fills and one seed:
 
-| | Full, black | Full, light | 96 links, black |
-|---|---:|---:|---:|
-| Evaluated | 5,940 | 15,385 | 262 |
-| Too few measurements | 334 | 0 | 238 |
-| Not flat | 2,434 | 10,348 | 17 |
-| Too tilted | 1,123 | 2,963 | 1 |
-| Not near the middle | 993 | 852 | 3 |
-| Holder hits | 479 | 491 | 0 |
-| Outside the opening | 66 | 135 | 0 |
-| Accepted | 511 | 596 | 3 |
-| Best candidates with at least 90% seal | 18 of 20 | 18 of 20 | 3 of 3 |
+| | Full, black | Full, light |
+|---|---:|---:|
+| Evaluated | 8,492 | 16,903 |
+| Too few measurements | 168 | 0 |
+| Not flat | 4,096 | 11,757 |
+| Too tilted | 1,709 | 2,990 |
+| Not near the middle | 1,083 | 794 |
+| Holder hits | 686 | 550 |
+| Outside the opening | 61 | 85 |
+| Accepted | 689 | 727 |
+| Best candidates with at least 90% seal | 17 of 20 | 17 of 20 |
 
-The middle requirement halves the accepted places in a full bin and costs some verified seals (it was 19 of 20 and
-20 of 20). That verification only measures flatness, so it cannot show whether the requirement prevents tipping. Only
-the real pick can test that.
+An earlier fill with 96 links on black had only 3 accepted places out of 262 evaluated, all three sealing, with 238 places
+having too few measurements. That measurement predates the current fill settings.
 
 **On black it works well in a full bin, but few places remain low in the bin.** Further away less light returns,
 so most places have too few measurements. The margin is small there.
