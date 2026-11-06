@@ -76,6 +76,7 @@ public partial class ReleaseStabilityTest : Node3D
         return points;
     }
 
+    /// <summary>Builds the region around the next point and releases its links.</summary>
     private void StartPoint()
     {
         _region = new PickRegion(_transforms, _mesh, _shapes, _points[_pointIndex]);
@@ -85,6 +86,7 @@ public partial class ReleaseStabilityTest : Node3D
         _dampingEnded = false;
     }
 
+    /// <summary>Records how far the links moved, and goes on to the next point.</summary>
     private void FinishPoint()
     {
         PickRegion region = _region!;
@@ -109,6 +111,7 @@ public partial class ReleaseStabilityTest : Node3D
         }
     }
 
+    /// <summary>Prints the totals over all points.</summary>
     private void Report()
     {
         GD.Print($"RESULTAAT schijnbewegingen: gemiddeld {_movedCounts.Average():F1} van {_activeCounts.Average():F0} schakels bewogen, " +

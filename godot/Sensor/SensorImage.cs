@@ -10,6 +10,7 @@ using static PalletDimensions;
 /// </summary>
 public static class SensorImage
 {
+    /// <summary>Returns RGB bytes, three per pixel. Without <paramref name="missing"/> no holes are coloured.</summary>
     public static byte[] Draw(float[] depth, MissingReason[]? missing)
     {
         const float near = SensorMount.AboveRim - 0.05f;
@@ -39,6 +40,7 @@ public static class SensorImage
         return pixels;
     }
 
+    /// <summary>Wraps RGB bytes in a Godot image.</summary>
     public static Image ToImage(byte[] pixels, PinholeCamera camera) =>
         Image.CreateFromData(camera.Width, camera.Height, false, Image.Format.Rgb8, pixels);
 }

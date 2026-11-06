@@ -5,9 +5,18 @@ namespace BinPicking.Core.Grasping;
 /// <summary>
 /// Searches a depth image for pick points. <see cref="GraspEvaluator"/> judges each location; the
 /// planner scans the image, counts the outcomes and ranks what remains.
+/// <para>
+/// This is the seam for a real camera: the search only needs a camera model, depth in metres with NaN for a
+/// hole, and the bin. It knows nothing about Godot or about where the depth comes from.
+/// </para>
 /// </summary>
 public static class GraspPlanner
 {
+    /// <param name="camera">The camera that made the depth image.</param>
+    /// <param name="depth">Depth per pixel in metres, with NaN for a hole.</param>
+    /// <param name="bin">The volume in which picking is allowed.</param>
+    /// <param name="settings">The requirements and the search step.</param>
+    /// <returns>The best candidates, best first, and how many locations failed each requirement.</returns>
     public static (List<GraspCandidate> Candidates, GraspSearchReport Report) FindGrasps(
         PinholeCamera camera, float[] depth, BinRegion bin, GraspSettings settings)
     {
@@ -60,7 +69,10 @@ public static class GraspPlanner
         return (KeepSeparated(accepted, settings), report);
     }
 
-    /// <summary>Best candidates first, at least one cup width apart.</summary>
+    /// <summary>
+    /// Best candidates first, at least one cup width apart. Otherwise the list would hold the same flat
+    /// face many times, leaving no real alternative when a pick fails.
+    /// </summary>
     private static List<GraspCandidate> KeepSeparated(List<GraspCandidate> accepted, GraspSettings settings)
     {
         var result = new List<GraspCandidate>();

@@ -13,7 +13,8 @@ public partial class GraspMarkers : Node3D
     private static readonly Color BestColor = new(0.1f, 1f, 0.2f);
     private static readonly Color CandidateColor = new(0.1f, 0.8f, 1f);
 
-    public void Show(PickSelection selection)
+    /// <summary>Replaces the markers with those of the current display mode.</summary>
+    public void ShowPicks(PickSelection selection)
     {
         foreach (Node child in GetChildren())
         {

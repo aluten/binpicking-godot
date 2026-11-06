@@ -3,6 +3,7 @@ namespace BinPicking.Core.Grasping;
 /// <summary>Requirements for a suction pick point. Sizes in metres, angles in degrees.</summary>
 public sealed record GraspSettings
 {
+    /// <summary>Width of the suction cup.</summary>
     public float CupDiameter { get; init; } = 0.03f;
 
     /// <summary>Width of the holder above the cup, which must stay clear of other parts.</summary>
@@ -23,6 +24,7 @@ public sealed record GraspSettings
     /// <summary>Minimum share of the measured points that must lie in the plane.</summary>
     public float MinInlierShare { get; init; } = 0.9f;
 
+    /// <summary>Largest allowed angle between the surface normal and the camera axis.</summary>
     public float MaxTiltDegrees { get; init; } = 35f;
 
     /// <summary>Radius around the cup in which the flat surface is measured.</summary>
@@ -34,5 +36,6 @@ public sealed record GraspSettings
     /// <summary>Evaluate a candidate every this many pixels.</summary>
     public int SearchStep { get; init; } = 6;
 
+    /// <summary>How many of the best candidates to keep.</summary>
     public int MaxCandidates { get; init; } = 20;
 }

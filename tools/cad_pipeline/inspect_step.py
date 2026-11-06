@@ -32,10 +32,12 @@ def oriented_extents(mesh):
 
 
 def fmt(values):
+    """Formats a list of sizes as "a x b x c"."""
     return " x ".join(f"{value:.4g}" for value in values)
 
 
 def report(scene, max_rows=40):
+    """Prints the totals, the groups of similar parts and the first parts."""
     parts = collect_parts(scene)
     if not parts:
         print("Geen meshes gevonden in dit bestand.")
@@ -71,6 +73,7 @@ def report(scene, max_rows=40):
 
 
 def main():
+    """Loads the STEP file named on the command line and prints its structure."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("step_file", type=Path)
     args = parser.parse_args()

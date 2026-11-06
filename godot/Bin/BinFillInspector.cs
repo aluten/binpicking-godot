@@ -6,9 +6,11 @@ using static PalletDimensions;
 /// <summary>Checks a fill geometrically and prints the result to the Output panel.</summary>
 public static class BinFillInspector
 {
+    // Limits in metres. A little overlap is normal, because collision shapes differ from the mesh.
     private const float MaxFloorPenetration = 0.005f;
     private const float WallReportDistance = 0.005f;
 
+    /// <summary>Reports how far links reach into the walls and floor, and how high the pile is.</summary>
     public static void Report(IReadOnlyList<Transform3D> transforms, Mesh linkMesh)
     {
         Vector3[] points = linkMesh.GetFaces().Distinct().ToArray();

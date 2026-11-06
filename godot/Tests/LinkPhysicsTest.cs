@@ -99,6 +99,7 @@ public partial class LinkPhysicsTest : Node3D
         _physicsSteps++;
     }
 
+    /// <summary>Checks the size of the imported link against the CAD model, and that collision parts exist.</summary>
     private static bool CheckImport(Mesh visual, int hullCount)
     {
         Vector3 sizeMm = visual.GetAabb().Size * 1000f;
@@ -113,6 +114,7 @@ public partial class LinkPhysicsTest : Node3D
         return passed;
     }
 
+    /// <summary>A small bin with thick walls, a camera and lights.</summary>
     private void BuildEnvironment()
     {
         AddBoxBody(new Vector3(1.5f, FloorThickness, 1.5f), new Vector3(0f, -FloorThickness / 2f, 0f));
@@ -149,6 +151,7 @@ public partial class LinkPhysicsTest : Node3D
         AddChild(body);
     }
 
+    /// <summary>Drops the links from a grid, with random rotations from a fixed seed.</summary>
     private void SpawnLinks(Mesh lod, List<(Shape3D Shape, Transform3D Offset)> shapes)
     {
         var random = new RandomNumberGenerator { Seed = RandomSeed };
@@ -199,6 +202,7 @@ public partial class LinkPhysicsTest : Node3D
         return true;
     }
 
+    /// <summary>Judges the settled pile, and continues with the lift test.</summary>
     private void FinishFalling()
     {
         _settled = _elapsed <= MaxSettleSeconds;
@@ -232,6 +236,7 @@ public partial class LinkPhysicsTest : Node3D
         StartLift();
     }
 
+    /// <summary>How far the visible model of any link reaches below the floor, in metres.</summary>
     private float DeepestFloorPenetration()
     {
         float deepest = 0f;
@@ -246,6 +251,7 @@ public partial class LinkPhysicsTest : Node3D
         return deepest;
     }
 
+    /// <summary>Lifts the top link along a fixed path, to see whether it pulls others along.</summary>
     private void StartLift()
     {
         RigidBody3D top = _links[0];
@@ -276,6 +282,7 @@ public partial class LinkPhysicsTest : Node3D
         }
     }
 
+    /// <summary>Reports which other links moved during the lift.</summary>
     private void ReportLift()
     {
         int moved = 0;

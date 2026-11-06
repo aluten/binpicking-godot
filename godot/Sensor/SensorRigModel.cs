@@ -23,6 +23,10 @@ public partial class SensorRigModel : Node3D
     private readonly float _halfHeightAtRim;
     private readonly float _distanceToRim;
 
+    /// <param name="camera">The camera model, which gives the covered area.</param>
+    /// <param name="cameraPosition">Position of the camera in world space.</param>
+    /// <param name="projectorBaseline">Distance from camera to projector, in metres.</param>
+    /// <param name="distanceToRim">Distance from the camera down to the rim, in metres.</param>
     public SensorRigModel(PinholeCamera camera, Vector3 cameraPosition, float projectorBaseline, float distanceToRim)
     {
         _cameraPosition = cameraPosition;
@@ -120,6 +124,7 @@ public partial class SensorRigModel : Node3D
         });
     }
 
+    /// <summary>Adds an object on the layer that the overview camera sees and the sensor does not.</summary>
     private void AddVisible(VisualInstance3D instance)
     {
         instance.Layers = 1u << (DepthSensorRig.ModelLayer - 1);

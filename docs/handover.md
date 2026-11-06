@@ -54,5 +54,8 @@ depth -> point cloud -> bin filter -> flat candidates -> sealing score
 
 ## Next step
 
-Find out why links are lost after lifting begins, then run many picks over several fills. Only then does a success rate
-mean something, and can the middle requirement be compared with a run without it.
+The principle is good enough for a demonstration; see [demo-questions.md](demo-questions.md). The cause of links coming
+off during lifting has been found: contact with neighbours, see [picking.md](picking.md#why-links-come-off-during-lifting).
+Not needed for the demonstration, but useful afterwards: take that into account in the pick choice and the lift
+direction, and run many picks over several fills. Only then does a success rate mean something. To connect a real camera,
+start with the steps in [demo-questions.md](demo-questions.md#connecting-a-real-camera).

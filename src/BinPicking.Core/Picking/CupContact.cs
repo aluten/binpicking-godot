@@ -19,6 +19,7 @@ public static class CupContact
         return touching / (float)ringDistances.Count;
     }
 
+    /// <summary>Tells whether enough of the ring touches the part for the cup to seal.</summary>
     public static bool Seals(IReadOnlyList<float?> ringDistances, SuctionCupSpecification cup) =>
         RingShare(ringDistances, cup.ContactTolerance) >= cup.MinRingContact;
 }

@@ -13,6 +13,7 @@ from scipy.spatial import cKDTree
 
 
 def load(path):
+    """Loads a generated file as a scene, whatever it contains."""
     return trimesh.load(path, force="scene")
 
 
@@ -25,6 +26,7 @@ def deviation_mm(reference, other):
 
 
 def main():
+    """Prints the size of each model and how far it deviates from the full link."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("generated_dir", type=Path)
     args = parser.parse_args()

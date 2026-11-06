@@ -1,6 +1,15 @@
 namespace BinPicking.Core.Sensing;
 
-/// <summary>Pinhole camera model. Converts between pixels and camera-space points in metres.</summary>
+/// <summary>
+/// Pinhole camera model without lens distortion. Converts between pixels and camera-space points in metres.
+/// Camera space: X to the right, Y down in the image, Z away from the camera.
+/// </summary>
+/// <param name="Width">Image width in pixels.</param>
+/// <param name="Height">Image height in pixels.</param>
+/// <param name="Fx">Focal length in pixels, horizontal.</param>
+/// <param name="Fy">Focal length in pixels, vertical.</param>
+/// <param name="Cx">Horizontal position of the optical centre, in pixels.</param>
+/// <param name="Cy">Vertical position of the optical centre, in pixels.</param>
 public readonly record struct PinholeCamera(int Width, int Height, float Fx, float Fy, float Cx, float Cy)
 {
     /// <summary>Creates a camera from a vertical field of view, assuming square pixels.</summary>

@@ -3,6 +3,7 @@ using Godot;
 /// <summary>The table next to the pallet where picked links are placed. Only for the eye.</summary>
 public partial class PlaceTable : Node3D
 {
+    /// <summary>Height of the table top in metres. The table has no physics.</summary>
     public const float TopHeight = 0.4f;
 
     private const float Thickness = 0.04f;
@@ -10,6 +11,7 @@ public partial class PlaceTable : Node3D
 
     private readonly Vector3 _center;
 
+    /// <param name="placePosition">The middle of the table, seen from above.</param>
     public PlaceTable(Vector3 placePosition)
     {
         _center = placePosition;

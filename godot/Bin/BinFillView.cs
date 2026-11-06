@@ -10,11 +10,11 @@ public partial class BinFillView : MultiMeshInstance3D
     {
         _linkMesh = linkMesh;
         Layers = 1u | (1u << (DepthSensorRig.LinkLayer - 1));
-        Show(transforms);
+        ShowLinks(transforms);
     }
 
     /// <summary>Draws these transforms, replacing what was drawn.</summary>
-    public void Show(IReadOnlyList<Transform3D> transforms)
+    public void ShowLinks(IReadOnlyList<Transform3D> transforms)
     {
         var multiMesh = new MultiMesh
         {
@@ -30,8 +30,9 @@ public partial class BinFillView : MultiMeshInstance3D
     }
 
     /// <summary>Stops drawing these links, because a pick region draws them now.</summary>
-    public void Hide(ISet<int> indices, IReadOnlyList<Transform3D> transforms)
+    public void HideLinks(ISet<int> indices)
     {
+        // A MultiMesh has no per-instance visibility, so the link is made tiny and moved out of sight.
         var hidden = new Transform3D(Basis.Identity.Scaled(Vector3.One * 1e-6f), new Vector3(0f, -10f, 0f));
         foreach (int index in indices)
         {

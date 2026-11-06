@@ -12,12 +12,19 @@ using static PalletDimensions;
 /// </summary>
 public partial class PickRegion : Node3D
 {
+    /// <summary>Links can move within this horizontal distance of the pick point, in metres.</summary>
     public const float DefaultActiveRadius = 0.25f;
+
+    /// <summary>Links lower than this below the pick point do not move, in metres.</summary>
     public const float DefaultActiveDepth = 0.15f;
+
+    /// <summary>Links further away than this are left out of the physics, in metres.</summary>
     public const float DefaultSupportRadius = 0.55f;
 
     private const float LinkMassKg = 0.15f; // Assumption, not an igus value.
     private const float WallThickness = 0.3f;
+
+    /// <summary>Linear and angular damping while the links settle after release.</summary>
     private const float ReleaseDamping = 30f;
 
     private readonly IReadOnlyList<Transform3D> _start;
@@ -84,6 +91,7 @@ public partial class PickRegion : Node3D
         }
     }
 
+    /// <summary>From here on the links move freely, which should happen just before lifting.</summary>
     public void EndDamping()
     {
         foreach (RigidBody3D body in Active.Values)
@@ -93,10 +101,13 @@ public partial class PickRegion : Node3D
         }
     }
 
+    /// <summary>How far an active link has moved since the start, in metres.</summary>
     public float MovedDistance(int index) => Active[index].GlobalPosition.DistanceTo(_start[index].Origin);
 
+    /// <summary>How far an active link has risen since the start, in metres.</summary>
     public float RaisedDistance(int index) => Active[index].GlobalPosition.Y - _start[index].Origin.Y;
 
+    /// <summary>Tells whether all active links, except one if given, move slower than this speed.</summary>
     public bool AllSettled(float speed, int? except) => Active
         .Where(pair => pair.Key != except)
         .All(pair => pair.Value.LinearVelocity.Length() < speed);
@@ -132,6 +143,7 @@ public partial class PickRegion : Node3D
         }
     }
 
+    /// <summary>The floor and walls. The visible pallet has no physics, so the region builds its own.</summary>
     private void BuildBin()
     {
         float halfX = InnerLength / 2f + WallThickness / 2f;

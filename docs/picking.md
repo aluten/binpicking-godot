@@ -64,14 +64,44 @@ the difference between them means little.
 `MovedBeforeLift` separates artefacts from effects of the pick: nothing has pulled on a link before lifting starts, so
 any movement then comes from the simulation. It is smaller now, but not zero.
 
+## Why links come off during lifting
+
+Investigated with temporary instrumentation that is not in the code. Each run is 15 picks from one saved fill, so a
+difference of two or three picks means little. Only the run without neighbour contact has a clear result.
+
+| Run | Placed | Lost while lifting |
+| --- | --- | --- |
+| Baseline, wider loss limits (30 mm, 25 degrees) | 10 | 5 |
+| Twice the torque limit | 10 | 5 |
+| Four times the torque limit | 12 | 3 |
+| First 80 mm along the surface normal, then up | 12 | 3 |
+| No collision between the lifted link and its neighbours | 15 | 0 |
+
+Findings:
+
+- **Neighbour contact is necessary for the loss.** With that contact removed, none of the 15 picks was lost. This
+  removes a physical effect, so it is a diagnostic, not a fix.
+- **Pull force is not the limit.** The force stayed at 6.4 N or less against the 14 N limit and never saturated.
+- **The neighbours are not carried along.** In the five baseline losses they had moved 2 to 13 mm, and all touching
+  bodies were active links, never frozen links or walls. The lifted link scrapes past or rotates against them.
+- **The link rotates before it is lost.** Losses come at 42 to 65 mm of rise, with rotation up to 24 degrees and the
+  torque limit saturated for 7 to 14 steps.
+- **A higher torque limit only partly helps.** At four times the limit the torque no longer saturates, yet three links
+  still reach the 25 degree limit, because the rotation servo is soft. Neighbours were also pulled along in 3 picks,
+  against 0 in the baseline.
+
+Not established: whether a real cup would let go in these situations. The torque limit, the servo stiffness and the
+loss limits are own estimates, and simplified collision shapes affect how links catch on each other. The wider moving
+zone was not tested.
+
 ## Known limitations
 
 - **Physics artefacts.** Restored links overlap slightly and can jump when released. A lower position correction, a new
   fill and damping reduce this, but 2.8 links per pick still move before lifting. See
   [testing.md](testing.md#physics-artefacts).
-- **The cause of the losses is not established.** All 7 occurred after lifting began, without links being pulled along
-  noticeably. They may be real jamming in the model, but links outside the moving zone are immovable, which can make
-  jamming worse than in reality.
+- **Losses are caused by contact with neighbouring links, not by vacuum force.** See
+  [Why links come off during lifting](#why-links-come-off-during-lifting). The hold limits are rough estimates, so the
+  share of losses is not a prediction for a real gripper.
 - **The tool does not push during descent**, because the links are still frozen then. Contact is therefore not simulated
   until the part is lifted.
 - **The tool moves in straight lines**, without a robot, joint limits or acceleration.

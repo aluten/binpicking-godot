@@ -8,14 +8,20 @@ using Godot;
 public static class CupContactProbe
 {
     private const int RingPoints = 32;
+
+    /// <summary>Each ray starts and ends this far from the ring, along the normal, in metres.</summary>
     private const float RayMargin = 0.03f;
+
+    /// <summary>A physics layer of its own, so the rays hit only the temporary body of this link.</summary>
     private const uint ProbeLayer = 1u << 19;
 
+    /// <summary>Returns the distance from each ring point to the link along the normal, or null for a miss.</summary>
     public static List<float?> MeasureRing(Node3D parent, Shape3D fullShape, Transform3D linkTransform, Vector3 point, Vector3 normal, float cupRadius)
     {
         var body = new StaticBody3D { Transform = linkTransform, CollisionLayer = ProbeLayer, CollisionMask = 0 };
         body.AddChild(new CollisionShape3D { Shape = fullShape });
         parent.AddChild(body);
+        // A new body is only known to the physics after the next step, unless its state is set directly.
         PhysicsServer3D.BodySetState(body.GetRid(), PhysicsServer3D.BodyState.Transform, linkTransform);
 
         Vector3 helper = Mathf.Abs(normal.Dot(Vector3.Forward)) > 0.9f ? Vector3.Right : Vector3.Forward;

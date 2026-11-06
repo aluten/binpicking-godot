@@ -4,6 +4,9 @@ namespace BinPicking.Core.Sensing;
 /// Turns perfect depth into roughly what a structured-light camera would measure:
 /// holes from low returned light, projector shadow, errors along edges, and noise.
 /// The causes are real; the formulas are a simplification and the values are illustrative. See docs/theory.md.
+/// No pattern is projected and nothing is triangulated: each pixel only decides, from perfect depth, whether a
+/// real camera would have lost it and how noisy it would be. A real camera replaces this class entirely; see
+/// docs/demo-questions.md.
 /// </summary>
 public static class DepthSensorModel
 {
@@ -11,6 +14,8 @@ public static class DepthSensorModel
     /// <param name="idealDepth">Depth per pixel along the optical axis, in metres.</param>
     /// <param name="projectorDepth">The same scene from the projector, shifted in parallel.</param>
     /// <param name="reflectance">Share of light returned per pixel, from 0 to 1.</param>
+    /// <param name="settings">How strongly each effect applies.</param>
+    /// <returns>Measured depth with NaN for a hole, and the reason per hole.</returns>
     public static DepthSensorResult Apply(
         PinholeCamera camera,
         float[] idealDepth,
@@ -42,6 +47,7 @@ public static class DepthSensorModel
                 double noiseRollA = pixelRandom.NextDouble();
                 double noiseRollB = pixelRandom.NextDouble();
 
+                // Checked in this order, so a pixel gets one reason: geometry first, then light.
                 if (IsShadowed(camera, projectorDepth, x, y, z, settings))
                 {
                     missing[i] = MissingReason.Shadow;
@@ -53,6 +59,7 @@ public static class DepthSensorModel
                 else
                 {
                     float signal = Signal(camera, idealDepth, reflectance[i], x, y, settings);
+                    // Half per pixel and half per block, so holes form patches instead of even speckle.
                     float roll = 0.5f * (float)signalRoll + 0.5f * clusters[i];
                     if (roll < MissingChance(signal, settings))
                     {
@@ -84,7 +91,10 @@ public static class DepthSensorModel
         return reflectance * Incidence(camera, depth, x, y) * distance * distance;
     }
 
-    /// <summary>Cosine of the angle between surface and view ray, derived from the depth itself.</summary>
+    /// <summary>
+    /// Cosine of the angle between surface and view ray, derived from the depth itself: the cross product of
+    /// the vectors between the neighbouring pixels gives the surface normal. 1 means facing the camera.
+    /// </summary>
     private static float Incidence(PinholeCamera camera, float[] depth, int x, int y)
     {
         if (x <= 0 || y <= 0 || x >= camera.Width - 1 || y >= camera.Height - 1)
@@ -111,12 +121,14 @@ public static class DepthSensorModel
         return MathF.Abs(nx * px + ny * py + nz * pz) / (normalLength * rayLength);
     }
 
+    /// <summary>The camera-space point of a pixel centre.</summary>
     private static (float X, float Y, float Z) Point(PinholeCamera camera, float[] depth, int x, int y)
     {
         float z = depth[y * camera.Width + x];
         return ((x + 0.5f - camera.Cx) * z / camera.Fx, (y + 0.5f - camera.Cy) * z / camera.Fy, z);
     }
 
+    /// <summary>Chance of a hole: 1 below SignalAlwaysMissing, 0 above SignalAlwaysValid, smooth in between.</summary>
     private static float MissingChance(float signal, DepthSensorSettings settings)
     {
         float t = (signal - settings.SignalAlwaysMissing) / (settings.SignalAlwaysValid - settings.SignalAlwaysMissing);
@@ -124,6 +136,7 @@ public static class DepthSensorModel
         return 1f - t * t * (3f - 2f * t);
     }
 
+    /// <summary>Standard deviation of the depth error: grows with distance squared and with a weaker signal.</summary>
     private static float Noise(float signal, float z, DepthSensorSettings settings)
     {
         float distance = z / settings.ReferenceDistance;
@@ -132,6 +145,7 @@ public static class DepthSensorModel
         return MathF.Min(noise, settings.MaxNoise);
     }
 
+    /// <summary>Tells whether the projector cannot light this point, because something closer blocks it.</summary>
     private static bool IsShadowed(
         PinholeCamera camera, float[] projectorDepth, int x, int y, float z, DepthSensorSettings settings)
     {
@@ -145,6 +159,7 @@ public static class DepthSensorModel
         return projectorDepth[y * camera.Width + projectorX] < z - settings.ShadowTolerance;
     }
 
+    /// <summary>Tells whether a direct neighbour lies at a clearly different depth.</summary>
     private static bool IsEdge(PinholeCamera camera, float[] depth, int x, int y, float jump)
     {
         float z = depth[y * camera.Width + x];
@@ -154,6 +169,7 @@ public static class DepthSensorModel
             || (y < camera.Height - 1 && MathF.Abs(depth[(y + 1) * camera.Width + x] - z) > jump);
     }
 
+    /// <summary>One random value per block of pixels, which makes low-signal holes appear in patches.</summary>
     private static float[] MakeClusters(PinholeCamera camera, DepthSensorSettings settings)
     {
         int size = Math.Max(settings.ClusterSize, 1);
@@ -177,6 +193,7 @@ public static class DepthSensorModel
         return clusters;
     }
 
+    /// <summary>Normally distributed value from two uniform values (Box-Muller).</summary>
     private static float Gaussian(double a, double b)
     {
         return (float)(Math.Sqrt(-2.0 * Math.Log(1.0 - a)) * Math.Cos(2.0 * Math.PI * b));

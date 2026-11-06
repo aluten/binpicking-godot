@@ -25,8 +25,10 @@ public sealed class LinkAppearance
         SetWhite(false);
     }
 
+    /// <summary>True when the links are white instead of their original black.</summary>
     public bool IsWhite { get; private set; }
 
+    /// <summary>Changes the colour of every link at once.</summary>
     public void SetWhite(bool white)
     {
         IsWhite = white;

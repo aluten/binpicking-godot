@@ -11,30 +11,45 @@ using static PalletDimensions;
 /// <summary>
 /// Performs one pick: approach, check the seal, lift, carry and release. Reports the outcome and the
 /// new link transforms once everything has settled.
+/// <para>
+/// This is the simulated counterpart of a robot program. With a real system the moves go to the robot, the seal
+/// check comes from a vacuum sensor, and <see cref="PickRegion"/> and <see cref="VacuumHold"/> no longer exist.
+/// </para>
 /// </summary>
 public partial class PickCycle : Node3D
 {
-    private const float ApproachDistance = 0.12f;
+    // Motion of the tool, in metres and metres per second. These are choices for the demo.
+    private const float ApproachDistance = 0.12f; // Start this far above the pick point, along the normal.
     private const float DescendSpeed = 0.15f;
     private const float LiftSpeed = 0.15f;
     private const float CarrySpeed = 0.45f;
-    private const float ClearAboveRim = 0.3f;
+    private const float ClearAboveRim = 0.3f; // Lift this far above the rim before moving sideways.
+
+    /// <summary>Links whose origin is this close to the pick point are tested for the contact ring.</summary>
     private const float SearchRadius = 0.14f;
+
+    // When another link counts as pulled along or disturbed, in metres.
     private const float PulledAlongRise = 0.02f;
     private const float DisturbedDistance = 0.005f;
+
+    // The bin counts as settled below this speed, but no sooner than the minimum and no later than the maximum.
     private const float SettledSpeed = 0.02f;
+    private const double MinSettleSeconds = 0.5;
     private const double MaxSettleSeconds = 3.0;
+
+    /// <summary>Time the links stay damped after release, so overlaps from the stored fill can relax.</summary>
     private const double EngageSeconds = 0.5;
 
+    /// <summary>The stages of a pick, in order. A failure jumps from any stage to Retreat.</summary>
     private enum Stage
     {
-        Descend,
-        CheckSeal,
-        Engage,
-        Lift,
-        Carry,
-        Retreat,
-        Settle,
+        Descend,   // The tool moves to the pick point. Everything is still frozen.
+        CheckSeal, // Is the rim of the cup touching one link all the way round?
+        Engage,    // Links are released and damped; the vacuum holds, but the tool does not move yet.
+        Lift,      // Straight up to above the rim.
+        Carry,     // Sideways, and down to the table.
+        Retreat,   // Up and away from the part.
+        Settle,    // Waits until the disturbed links have stopped moving.
         Done,
     }
 
@@ -65,7 +80,16 @@ public partial class PickCycle : Node3D
     private bool _lostBeforeLift;
     private PickOutcome _outcome;
     private readonly List<Vector3> _carryPath = new();
+    private readonly HashSet<int> _pulledIndices = new();
 
+    /// <param name="transforms">All links in the bin.</param>
+    /// <param name="lod">The simplified link mesh, for drawing and for the physics region.</param>
+    /// <param name="full">The full link mesh, which decides whether the contact ring touches.</param>
+    /// <param name="shapes">The convex collision shapes of a link.</param>
+    /// <param name="grasp">The pick point in camera space.</param>
+    /// <param name="cup">What the cup can hold.</param>
+    /// <param name="toolDiameter">Width of the holder above the cup.</param>
+    /// <param name="placePosition">Where to put the link down.</param>
     public PickCycle(
         List<Transform3D> transforms, Mesh lod, Mesh full, List<(Shape3D Shape, Transform3D Offset)> shapes,
         GraspCandidate grasp, SuctionCupSpecification cup, float toolDiameter, Vector3 placePosition)
@@ -97,6 +121,7 @@ public partial class PickCycle : Node3D
         AddChild(_region);
         RegionReady?.Invoke(_region.Included);
 
+        // Tool Y lies along the surface normal. The helper only has to be not parallel to the normal.
         Vector3 helper = Mathf.Abs(_normal.Dot(Vector3.Forward)) > 0.9f ? Vector3.Right : Vector3.Forward;
         Vector3 x = helper.Cross(_normal).Normalized();
         _toolBasis = new Basis(x, _normal, x.Cross(_normal));
@@ -158,7 +183,7 @@ public partial class PickCycle : Node3D
             case Stage.Settle:
                 _settleSeconds += delta;
                 int? except = _outcome == PickOutcome.Placed ? _target : null;
-                if (_settleSeconds > 0.5 && (_region.AllSettled(SettledSpeed, except) || _settleSeconds > MaxSettleSeconds))
+                if (_settleSeconds > MinSettleSeconds && (_region.AllSettled(SettledSpeed, except) || _settleSeconds > MaxSettleSeconds))
                 {
                     Finish();
                 }
@@ -195,6 +220,7 @@ public partial class PickCycle : Node3D
         return (best, bestRing);
     }
 
+    /// <summary>Moves the tool towards the target at the current speed. Returns true on arrival.</summary>
     private bool MoveTool(double delta)
     {
         Vector3 next = _tool.GlobalPosition.MoveToward(_toolTarget, _toolSpeed * (float)delta);
@@ -202,6 +228,7 @@ public partial class PickCycle : Node3D
         return next.IsEqualApprox(_toolTarget);
     }
 
+    /// <summary>Decides from the contact ring whether the cup seals, and if so releases the links and starts the vacuum.</summary>
     private void CheckSeal()
     {
         (int found, List<float?> ring) = FindLinkUnderCup();
@@ -232,6 +259,7 @@ public partial class PickCycle : Node3D
         _stage = Stage.Engage;
     }
 
+    /// <summary>Nothing has pulled on the links yet, so what moved here is a simulation artefact.</summary>
     private void CountMovedBeforeLift()
     {
         _movedBeforeLift = _region.Active.Keys.Count(i => i != _target && _region.MovedDistance(i) > DisturbedDistance);
@@ -246,6 +274,7 @@ public partial class PickCycle : Node3D
         Lifting?.Invoke();
     }
 
+    /// <summary>Lets the vacuum act for one step, and starts the retreat when it loses the link.</summary>
     private void HoldLink(double delta)
     {
         if (!_hold!.Step(_tool.GlobalTransform, delta))
@@ -254,6 +283,7 @@ public partial class PickCycle : Node3D
         }
     }
 
+    /// <summary>Remembers every other link that has risen noticeably during lifting.</summary>
     private void TrackPulledAlong()
     {
         foreach (int index in _region.Active.Keys)
@@ -265,8 +295,6 @@ public partial class PickCycle : Node3D
         }
         _pulledAlong = _pulledIndices.Count;
     }
-
-    private readonly HashSet<int> _pulledIndices = new();
 
     private void StartCarry()
     {
@@ -313,6 +341,7 @@ public partial class PickCycle : Node3D
         _toolTarget = _tool.GlobalPosition + Vector3.Up * ApproachDistance;
     }
 
+    /// <summary>Collects the new positions of the links and reports the result.</summary>
     private void Finish()
     {
         _stage = Stage.Done;

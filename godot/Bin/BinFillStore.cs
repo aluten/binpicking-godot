@@ -6,10 +6,15 @@ public static class BinFillStore
 {
     private const string FillPath = "res://generated/pallet_vulling.json";
 
+    /// <summary>Tells whether a fill has been saved.</summary>
     public static bool Exists() => FileAccess.FileExists(FillPath);
 
+    /// <summary>Deletes the saved fill, which makes the demo fill the bin again.</summary>
     public static void Delete() => DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(FillPath));
 
+    /// <summary>Saves each link as position and quaternion.</summary>
+    /// <param name="transforms">The link transforms.</param>
+    /// <param name="seed">The random seed of the fill, for reference.</param>
     public static void Save(IReadOnlyList<Transform3D> transforms, int seed)
     {
         var rows = new Godot.Collections.Array();
@@ -27,6 +32,7 @@ public static class BinFillStore
         file.StoreString(Json.Stringify(data));
     }
 
+    /// <summary>Loads the saved link transforms.</summary>
     public static List<Transform3D> Load()
     {
         using FileAccess file = FileAccess.Open(FillPath, FileAccess.ModeFlags.Read);

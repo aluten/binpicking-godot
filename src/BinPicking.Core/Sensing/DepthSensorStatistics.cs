@@ -10,8 +10,12 @@ public sealed record DepthSensorStatistics(
     int OtherMissing,
     double PartNoiseMeters)
 {
+    /// <summary>Pixels on parts without a measurement, whatever the reason.</summary>
     public int PartMissing => PartLowSignal + PartShadow + PartEdge;
 
+    /// <summary>Counts the holes per reason and computes the depth error against perfect depth.</summary>
+    /// <param name="result">The measurement.</param>
+    /// <param name="idealDepth">Perfect depth, which exists only in simulation.</param>
     /// <param name="isPart">Tells whether a pixel index lies on a part.</param>
     public static DepthSensorStatistics Compute(DepthSensorResult result, float[] idealDepth, Func<int, bool> isPart)
     {

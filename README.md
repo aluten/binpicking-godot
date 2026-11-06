@@ -26,7 +26,7 @@ entirely in simulation.
 4. Open `godot/project.godot` in Godot 4.7.2 (.NET edition) and click the hammer to build.
 5. Open `Scenes/link_physics_test.tscn` and press F6. The Output must end with `RESULTAAT: GESLAAGD`.
 6. Open `Scenes/pallet_bin.tscn` and press F6 to see the pallet. Without a stored fill, you first watch the bin
-   fill up. The controls are shown at the top left.
+   fill up. Open the legend at the bottom left with key H.
 
 ## Documentation
 
@@ -41,6 +41,7 @@ entirely in simulation.
 | [docs/picking.md](docs/picking.md) | How a pick is performed, its models and its limits |
 | [docs/theory.md](docs/theory.md) | The theory behind the overlay and pick strategy, with sources |
 | [docs/testing.md](docs/testing.md) | Which tests exist, how to read them and what they showed |
+| [docs/demo-questions.md](docs/demo-questions.md) | Answers for a demonstration: surface, pick choice, lighting and a real camera |
 | [docs/handover.md](docs/handover.md) | Status, decisions, open points and next steps |
 
 ## About the model

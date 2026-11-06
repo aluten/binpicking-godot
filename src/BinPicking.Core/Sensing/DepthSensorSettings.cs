@@ -39,5 +39,6 @@ public sealed record DepthSensorSettings
     /// <summary>Size in pixels of the blocks that make holes cluster.</summary>
     public int ClusterSize { get; init; } = 4;
 
+    /// <summary>Start of the random numbers; the same seed gives the same image.</summary>
     public int Seed { get; init; } = 1;
 }

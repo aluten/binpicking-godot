@@ -22,6 +22,7 @@ public static class SealVerifier
                 float z = idealDepth[y * camera.Width + x];
                 (float pointX, float pointY) = camera.Unproject(x, y, z);
                 float dx = pointX - grasp.X, dy = pointY - grasp.Y, dz = z - grasp.Z;
+                // Split the offset into a part along the normal and a part in the plane (Pythagoras).
                 float along = dx * grasp.NormalX + dy * grasp.NormalY + dz * grasp.NormalZ;
                 float inPlaneSquared = dx * dx + dy * dy + dz * dz - along * along;
                 if (inPlaneSquared > cupRadiusSquared)

@@ -96,6 +96,7 @@ def measure_flat(mesh, sign):
 
 
 def export_visual(mesh, path):
+    """Writes the link with smooth shading on curved parts and sharp edges on the rest."""
     shaded = trimesh.graph.smooth_shade(mesh, angle=np.radians(30))
     shaded.visual = trimesh.visual.TextureVisuals(material=BLACK)
     shaded.export(path, include_normals=True)
@@ -103,6 +104,7 @@ def export_visual(mesh, path):
 
 
 def main():
+    """Runs the whole conversion from the STEP file to the files in godot/generated."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("step_file", type=Path)
     parser.add_argument("output_dir", type=Path)

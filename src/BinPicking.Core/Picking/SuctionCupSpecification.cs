@@ -6,6 +6,7 @@ namespace BinPicking.Core.Picking;
 /// </summary>
 public sealed record SuctionCupSpecification
 {
+    /// <summary>Outer diameter of the cup.</summary>
     public float Diameter { get; init; } = 0.03f;
 
     /// <summary>Pressure difference between the outside air and the cup.</summary>
@@ -20,6 +21,7 @@ public sealed record SuctionCupSpecification
     /// <summary>Minimum share of the ring that must touch the part for a seal.</summary>
     public float MinRingContact { get; init; } = 0.9f;
 
+    /// <summary>Area of the cup opening.</summary>
     public float Area => MathF.PI * Diameter * Diameter / 4f;
 
     /// <summary>Pull force: pressure difference x area x efficiency.</summary>

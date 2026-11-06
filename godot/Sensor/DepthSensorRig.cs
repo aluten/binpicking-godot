@@ -9,17 +9,33 @@ using Godot;
 /// <summary>
 /// Virtual depth camera that looks straight down. Provides perfect depth from the camera and the
 /// projector, plus the reflectance per pixel. The sensor model turns those into a realistic measurement.
+/// <para>
+/// Nothing is lit here and no pattern is projected: the images are unlit renders. A real camera replaces this
+/// class and the sensor model together. See docs/sensor-model.md and docs/demo-questions.md.
+/// </para>
 /// </summary>
 public partial class DepthSensorRig : Node3D
 {
+    /// <summary>Render layer of the full-screen quad that writes depth; only the depth cameras see it.</summary>
     public const int DepthLayer = 2;
+
+    /// <summary>Render layer of things the sensor must not see, such as the tool and the markers.</summary>
     public const int ModelLayer = 4;
+
+    /// <summary>Render layer of the links, which gives the mask of link pixels for the statistics.</summary>
     public const int LinkLayer = 3;
 
     private const int ImageWidth = 1280;
     private const int ImageHeight = 960;
+
+    /// <summary>The largest depth that fits in the image, in metres.</summary>
     private const float EncodedRange = 6f;
 
+    /// <summary>Frames to wait, so every viewport has drawn the current scene.</summary>
+    private const int FramesPerCapture = 4;
+
+    // Writes depth as colour. A 16-bit float channel is too coarse for millimetres, so the value is split:
+    // red holds the coarse steps and green the remainder. See ReadDepth for the way back.
     private const string DepthShaderCode = @"
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never;
@@ -47,6 +63,7 @@ void fragment() {
     private SubViewport _albedo = null!;
     private SubViewport _partMask = null!;
 
+    /// <summary>The camera model that belongs to these images.</summary>
     public PinholeCamera Camera { get; private set; }
 
     /// <summary>Places the camera in world space; image X is world X.</summary>
@@ -68,7 +85,7 @@ void fragment() {
     public async Task<(float[] Depth, float[] ProjectorDepth, float[] Reflectance, bool[] IsPart)> CaptureAsync()
     {
         SetUpdating(SubViewport.UpdateMode.Always);
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < FramesPerCapture; i++)
         {
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         }
@@ -81,6 +98,7 @@ void fragment() {
         return (ReadDepth(depth), ReadDepth(projector), ReadReflectance(albedo), ReadReflectance(mask).Select(r => r > 0f).ToArray());
     }
 
+    /// <summary>The viewports only render during a capture, which saves a lot of rendering time.</summary>
     private void SetUpdating(SubViewport.UpdateMode mode)
     {
         _cameraDepth.RenderTargetUpdateMode = mode;
@@ -89,6 +107,11 @@ void fragment() {
         _partMask.RenderTargetUpdateMode = mode;
     }
 
+    /// <summary>Adds one virtual camera with its own image, either for depth or for unlit colour.</summary>
+    /// <param name="position">Camera position in world space, looking straight down.</param>
+    /// <param name="verticalFovDegrees">Vertical field of view.</param>
+    /// <param name="depthPass">True to write depth with the shader, false for plain colour.</param>
+    /// <param name="cullMask">The render layers a colour view sees.</param>
     private SubViewport AddView(Vector3 position, float verticalFovDegrees, bool depthPass, uint cullMask = 0u)
     {
         var viewport = new SubViewport
@@ -138,6 +161,7 @@ void fragment() {
         return viewport;
     }
 
+    /// <summary>Puts the coarse and fine channel back together into depth in metres.</summary>
     private static float[] ReadDepth(Image image)
     {
         (byte[] bytes, int stride) = HalfFloatData(image);
@@ -152,6 +176,7 @@ void fragment() {
         return depth;
     }
 
+    /// <summary>The average of red, green and blue, as the share of light that a surface returns.</summary>
     private static float[] ReadReflectance(Image image)
     {
         (byte[] bytes, int stride) = HalfFloatData(image);
@@ -167,6 +192,7 @@ void fragment() {
         return reflectance;
     }
 
+    /// <summary>The raw image data, and the number of bytes per pixel for its format.</summary>
     private static (byte[] Bytes, int Stride) HalfFloatData(Image image)
     {
         return image.GetFormat() switch

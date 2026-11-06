@@ -4,14 +4,23 @@ using Godot;
 /// <summary>
 /// Holds a link against the cup with a limited force and torque, instead of attaching it rigidly.
 /// A hooked or off-centre link can therefore come off, as with a real vacuum.
+/// <para>
+/// This is a physics stand-in, not a model of a real cup. The gains and loss limits are own choices, and the
+/// loss limits decide when "the vacuum is lost". What makes links come off is described in docs/picking.md.
+/// </para>
 /// </summary>
 public sealed class VacuumHold
 {
+    // Share of the remaining error corrected per step. Higher values make the light link oscillate.
     private const float PositionGain = 0.3f;
     private const float RotationGain = 0.1f;
+
+    // The vacuum counts as lost when the link stays this far out of place for LostAfterSeconds.
     private const float LostDistance = 0.012f;
     private const float LostAngleRadians = 0.21f;
     private const double LostAfterSeconds = 0.1;
+
+    private const float GravityMetersPerSecondSquared = 9.8f;
 
     private readonly RigidBody3D _link;
     private readonly Transform3D _linkInTool;
@@ -21,6 +30,7 @@ public sealed class VacuumHold
     private Vector3 _previousToolPosition;
     private double _overLimitSeconds;
 
+    /// <summary>Remembers where the link sits relative to the tool now, and keeps it there from then on.</summary>
     public VacuumHold(RigidBody3D link, Transform3D tool, SuctionCupSpecification cup)
     {
         _link = link;
@@ -43,7 +53,7 @@ public sealed class VacuumHold
         Vector3 toolVelocity = (tool.Origin - _previousToolPosition) / dt;
         _previousToolPosition = tool.Origin;
         Vector3 wantedVelocity = toolVelocity + positionError * PositionGain / dt;
-        Vector3 gravityCompensation = Vector3.Up * (float)_link.Mass * 9.8f * dt;
+        Vector3 gravityCompensation = Vector3.Up * (float)_link.Mass * GravityMetersPerSecondSquared * dt;
         Vector3 impulse = (wantedVelocity - _link.LinearVelocity) * (float)_link.Mass + gravityCompensation;
         impulse = impulse.LimitLength(_force * dt);
         _link.ApplyCentralImpulse(impulse);

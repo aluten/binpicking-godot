@@ -6,6 +6,11 @@ namespace BinPicking.Core.Grasping;
 /// Judges whether a suction cup can pick at one location in measured depth. This is a geometric
 /// heuristic built for this project; the thresholds are first choices. See docs/theory.md.
 /// An instance belongs to one depth image and is not thread-safe.
+/// <para>
+/// There is no part recognition here. A location is good when the depth around it looks like a surface the
+/// cup can seal on, so one flat face is enough and the link itself never has to be identified. The checks run
+/// from cheap to expensive and stop at the first failure, which also gives the rejection counts on screen.
+/// </para>
 /// </summary>
 public sealed class GraspEvaluator
 {
@@ -16,6 +21,10 @@ public sealed class GraspEvaluator
     private readonly float _minTiltCosine;
     private readonly PointSet _points = new();
 
+    /// <param name="camera">The camera that made the depth image.</param>
+    /// <param name="depth">Depth per pixel in metres, with NaN for a hole.</param>
+    /// <param name="bin">The volume in which picking is allowed.</param>
+    /// <param name="settings">The requirements.</param>
     public GraspEvaluator(PinholeCamera camera, float[] depth, BinRegion bin, GraspSettings settings)
     {
         if (depth.Length != camera.Width * camera.Height)
@@ -70,6 +79,7 @@ public sealed class GraspEvaluator
             return GraspEvaluation.Rejected(GraspRejection.TooTilted);
         }
 
+        // From here on the cup centre lies on the fitted plane, which is less noisy than one measured pixel.
         float centerZ = plane.ZAt(centerX, centerY);
 
         // Requirement: near the middle of the flat surface, to limit tipping. Jiang et al. prefer central
@@ -102,7 +112,11 @@ public sealed class GraspEvaluator
             Score(validShare, inlierShare, plane, centerZ, centerOffset)));
     }
 
-    /// <summary>Own heuristic: prefers a well-measured, flat, facing, central and high location.</summary>
+    /// <summary>
+    /// Own heuristic: prefers a well-measured, flat, facing, central and high location. The factors are
+    /// multiplied, so one weak factor pulls the whole score down. Height and centredness count for half,
+    /// because a low or less central location that passed the requirements is still usable.
+    /// </summary>
     private float Score(float validShare, float inlierShare, Plane plane, float z, float centerOffset)
     {
         float height = (_bin.FloorZ - z) / (_bin.FloorZ - _bin.RimZ);
@@ -181,6 +195,7 @@ public sealed class GraspEvaluator
         return discArea;
     }
 
+    /// <summary>Tells whether anything within the holder width rises too far above the plane. Holes count as free.</summary>
     private bool IsToolClear(int pixelX, int pixelY, float z, Plane plane)
     {
         float pixelRadius = _camera.Fx * (_settings.ToolDiameter / 2f) / z;

@@ -12,18 +12,29 @@ using static PalletDimensions;
 /// </summary>
 public partial class BinFiller : Node
 {
+    /// <summary>The number of links in a full bin; see docs/bin.md.</summary>
     public const int FullBinLinks = 720;
 
+    /// <summary>The same seed gives the same fill on the same machine.</summary>
     public const int RandomSeed = 1;
+
+    // Each batch falls from a grid above the pile, in metres.
     private const int BatchLinks = 24;
     private const int SpawnColumns = 6;
     private const int SpawnRows = 4;
     private const float SpawnClearance = 0.14f;
+    private const float SpawnLayerHeight = 0.2f;
+    private const float DropWallMargin = 0.1f;
     private const float LinkMassKg = 0.15f; // Assumption, not an igus value.
 
+    // Settled links this far below the top are frozen, which keeps the simulation fast.
     private const float FreezeDepth = 0.12f;
     private const float SettledSpeed = 0.02f;
+
+    /// <summary>A link further than this into a wall or the floor is not frozen, but falls again.</summary>
     private const float MaxOverlapWhenFrozen = 0.003f;
+
+    // How long a batch gets to settle, and how long the last links get to come loose.
     private const double MinBatchSeconds = 0.8;
     private const double MaxBatchSeconds = 4.0;
     private const double MaxExtraSettleSeconds = 30.0;
@@ -113,6 +124,7 @@ public partial class BinFiller : Node
         }
     }
 
+    /// <summary>The floor and walls. They are wide and high, so no falling link can leave the bin.</summary>
     private void BuildCollision()
     {
         float halfX = InnerLength / 2f + WallThickness / 2f;
@@ -133,6 +145,7 @@ public partial class BinFiller : Node
         AddChild(body);
     }
 
+    /// <summary>Drops the next links from a grid above the pile.</summary>
     private void SpawnBatch()
     {
         float startY = HighestLinkY() + SpawnClearance;
@@ -147,7 +160,7 @@ public partial class BinFiller : Node
             int layer = i / cells;
             var position = new Vector3(
                 (cell % SpawnColumns + 0.5f) * stepX - InnerLength / 2f,
-                startY + layer * 0.2f,
+                startY + layer * SpawnLayerHeight,
                 (cell / SpawnColumns + 0.5f) * stepZ - InnerWidth / 2f);
             AddChild(CreateLink(position));
         }
@@ -189,6 +202,7 @@ public partial class BinFiller : Node
         return highest;
     }
 
+    /// <summary>Freezes settled links deep in the pile, so only the top of the pile takes computing time.</summary>
     private void FreezeDeepLinks()
     {
         float limit = HighestLinkY() - FreezeDepth;
@@ -213,14 +227,15 @@ public partial class BinFiller : Node
     private void DropAgain(RigidBody3D link)
     {
         link.GlobalPosition = new Vector3(
-            _random.RandfRange(-InnerLength / 2f + 0.1f, InnerLength / 2f - 0.1f),
+            _random.RandfRange(-InnerLength / 2f + DropWallMargin, InnerLength / 2f - DropWallMargin),
             HighestLinkY() + SpawnClearance,
-            _random.RandfRange(-InnerWidth / 2f + 0.1f, InnerWidth / 2f - 0.1f));
+            _random.RandfRange(-InnerWidth / 2f + DropWallMargin, InnerWidth / 2f - DropWallMargin));
         link.LinearVelocity = Vector3.Zero;
         link.AngularVelocity = Vector3.Zero;
         _droppedAgain++;
     }
 
+    /// <summary>Tells whether every surface point of the link lies inside the bin, within the allowed overlap.</summary>
     private bool IsClearOfBin(RigidBody3D link)
     {
         Transform3D transform = link.GlobalTransform;
