@@ -4,8 +4,8 @@ A working, explainable simulation of bin picking with a suction cup: pick one bl
 of identical black parts. The project uses an igus cable chain link as a public example and currently runs
 entirely in simulation.
 
-> Status: the CAD step, a pallet with 720 links, a depth camera with a sensor model, and choosing a pick point
-> all work. The pick itself still has to be built.
+> Status: the CAD step, a pallet with 720 links, a depth camera with a sensor model, choosing a pick point and
+> a simulated pick all work. The vacuum and mass values are assumptions.
 
 ## Quick start
 
@@ -38,6 +38,7 @@ entirely in simulation.
 | [docs/bin.md](docs/bin.md) | How the pallet is built and filled, and the controls |
 | [docs/sensor-model.md](docs/sensor-model.md) | How the virtual camera measures black parts |
 | [docs/pick-point.md](docs/pick-point.md) | How a pick point is chosen and verified |
+| [docs/picking.md](docs/picking.md) | How a pick is performed, its models and its limits |
 | [docs/theory.md](docs/theory.md) | The theory behind the overlay and pick strategy, with sources |
 | [docs/testing.md](docs/testing.md) | Which tests exist, how to read them and what they showed |
 | [docs/handover.md](docs/handover.md) | Status, decisions, open points and next steps |

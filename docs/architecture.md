@@ -37,6 +37,8 @@ the same algorithms.
 | | `DepthSensorSettings` | Settings of the sensor model |
 | | `DepthSensorResult`, `MissingReason` | Measured depth, and why a pixel has none |
 | | `DepthSensorStatistics` | Summarises a measurement |
+| `Picking` | `SuctionCupSpecification`, `CupContact` | What a cup can hold, and the contact-ring test |
+| | `PickOutcome`, `PickResult`, `PickStatistics` | Pick results |
 | `Grasping` | `GraspEvaluator` | **Judges one location**: names the failed requirement or returns a candidate |
 | | `GraspPlanner` | Scans the image, counts outcomes and ranks the candidates |
 | | `SealVerifier` | Checks a candidate against perfect depth, in simulation only |
@@ -60,7 +62,12 @@ the same algorithms.
 | | `SensorMount` | Sensor position and the camera-to-world mapping |
 | | `SensorMeasurement` | Applies the sensor model to a capture |
 | | `SensorImage` | Draws depth as an image |
-| `Picking` | `PickSelection` | Runs the search and tracks what is displayed |
+| `Picking` | `PickCycle` | Performs one pick from approach to settling |
+| | `PickRegion` | The physics around one pick |
+| | `VacuumHold` | Holds a link with limited force and torque |
+| | `CupContactProbe` | Measures the contact ring against the full mesh |
+| | `SuctionTool`, `PlaceTable` | The tool and the table |
+| | `PickSelection` | Runs the search and tracks what is displayed |
 | | `GraspMarkers` | Shows pick points in 3D |
 | | `GraspImageOverlay` | Shows pick points on a sensor image |
 | | `PickDisplayMode` | The display steps |

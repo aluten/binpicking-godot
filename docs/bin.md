@@ -28,6 +28,7 @@ changes for the vision problem. The number is `FullBinLinks` in `BinFiller`.
 | 1 / 2 / 3 | Overview / from the sensor / close-up |
 | 4 | 3D / perfect depth / sensor |
 | B | Black or light links |
+| G / A | Perform one pick / 10 picks in a row |
 | R | Empty and fill the bin; press R again to stop at that height |
 | P | Show candidates; again: show the choice; again: hide |
 

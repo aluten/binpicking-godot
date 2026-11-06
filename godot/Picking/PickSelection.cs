@@ -42,6 +42,8 @@ public sealed class PickSelection
 
 	public void Clear() => Candidates = new List<GraspCandidate>();
 
+	public void HideDisplay() => Mode = PickDisplayMode.Hidden;
+
 	public void Search(PinholeCamera camera, float[] measuredDepth, float[] idealDepth)
 	{
 		ulong started = Time.GetTicksMsec();

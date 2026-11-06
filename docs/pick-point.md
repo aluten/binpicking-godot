@@ -79,4 +79,4 @@ possible in simulation, and it has limits:
 - Two links at the same height can count as one surface.
 - Holes in the measurement are treated as free space in the holder check.
 - The middle of a surface is an approximation: there are no part labels, and it is not the centre of mass.
-- Nothing has been picked yet: vacuum, weight and hooked links only come into play with the pick.
+- This page only covers choosing. The pick itself, with vacuum and hooked links, is in [picking.md](picking.md).

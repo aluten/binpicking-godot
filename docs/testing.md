@@ -5,7 +5,7 @@
 | `Scenes/depth_test.tscn` | Does depth arrive accurately in C#? | Three measurements deviate at most 1 mm |
 | `Scenes/link_physics_test.tscn` | Do import, scale and stacking work? | No line with `FOUT` |
 | `Scenes/pallet_bin.tscn` | Does the fill fit and is the sensor distance right? | No line with `FOUT` |
-| `tests/BinPicking.Core.Tests` | Are the sensor model and pick search correct? | `RESULT: PASSED` |
+| `tests/BinPicking.Core.Tests` | Are the sensor model, pick search and pick model correct? | `RESULT: PASSED` |
 
 For a scene: open it in Godot, click the hammer and press F6. Results appear in the Output panel, in Dutch: `OK`
 or `FOUT` (failed), and `RESULTAAT: GESLAAGD` (result: passed).

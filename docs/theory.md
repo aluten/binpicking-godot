@@ -44,7 +44,8 @@ A suction cup only holds if its rim makes contact all the way round. `GraspEvalu
 - **Forces.** [Dex-Net 3.0](https://ar5iv.labs.arxiv.org/html/1709.06670) also evaluates whether the seal can resist the
   forces on the part. This project does not. The distance to the middle of a surface is only a rough stand-in.
 - **Contact model.** Dex-Net 3.0 models the cup as a spring system and checks whether the contact ring lies on the
-  surface. This project requires the whole circle to be flat, which is simpler and stricter.
+  surface. When choosing, this project requires the whole circle to be flat, which is simpler and stricter. During the
+  pick, `CupContact` does test a ring, but without the spring model.
 - **Robot reachability.** [Jiang et al.](https://ar5iv.labs.arxiv.org/html/2111.02571) evaluate inverse kinematics and
   collisions of the robot.
 - **Learning.** Both sources train a neural network. This project deliberately uses no network yet, so every step

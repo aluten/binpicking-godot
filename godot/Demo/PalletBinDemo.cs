@@ -3,6 +3,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BinPicking.Core.Grasping;
+using BinPicking.Core.Picking;
 using Godot;
 using static PalletDimensions;
 
@@ -27,6 +29,21 @@ public partial class PalletBinDemo : Node3D
 	private BinFiller? _filler;
 	private SensorMeasurement? _sensor;
 	private SensorView _view = SensorView.Scene3D;
+
+	private const int AutoPickCount = 10;
+	private const float RetryExclusionRadius = 0.03f;
+
+	private readonly SuctionCupSpecification _cup = new();
+	private readonly PickStatistics _statistics = new();
+	private readonly List<Vector3> _failedPoints = new();
+	private List<Transform3D> _transforms = new();
+	private BinFillView? _fillView;
+	private Mesh? _fullMesh;
+	private List<(Shape3D Shape, Transform3D Offset)>? _shapes;
+	private PickCycle? _cycle;
+	private int _autoPicksLeft;
+	private string _lastPickSummary = string.Empty;
+	private string? _liftScreenshot;
 
 	public override void _Ready()
 	{
@@ -79,8 +96,15 @@ public partial class PalletBinDemo : Node3D
 			case Key.B when _sensor != null:
 				MeasureAndRefresh(!_sensor.LightParts);
 				break;
-			case Key.P:
+			case Key.P when _cycle == null:
 				NextPickMode();
+				break;
+			case Key.G when _cycle == null:
+				StartPick();
+				break;
+			case Key.A when _cycle == null:
+				_autoPicksLeft = AutoPickCount;
+				StartPick();
 				break;
 			case Key.R when _filler != null:
 				_filler.RequestStop();
@@ -116,10 +140,12 @@ public partial class PalletBinDemo : Node3D
 
 	private void ShowStoredFill()
 	{
-		List<Transform3D> transforms = BinFillStore.Load();
-		AddChild(new BinFillView(_linkMesh!, transforms));
-		_hud.SetStatus($"{transforms.Count} schakels in de bak");
-		BinFillInspector.Report(transforms, _linkMesh!);
+		_transforms = BinFillStore.Load();
+		_fillView = new BinFillView(_linkMesh!, _transforms);
+		AddChild(_fillView);
+		AddChild(new PlaceTable(PlacePosition));
+		_hud.SetStatus($"{_transforms.Count} schakels in de bak");
+		BinFillInspector.Report(_transforms, _linkMesh!);
 		_ = StartSensorAsync();
 	}
 
@@ -180,7 +206,8 @@ public partial class PalletBinDemo : Node3D
 
 	private void RefreshDisplay()
 	{
-		_hud.SetStatus($"{_sensor!.Summary}\n{_pick.Summary}");
+		string pickLine = _lastPickSummary.Length > 0 ? $"\n{_lastPickSummary}" : string.Empty;
+		_hud.SetStatus($"{_sensor!.Summary}\n{_pick.Summary}{pickLine}");
 		_markers.Show(_pick);
 
 		if (_view == SensorView.Scene3D)
@@ -195,6 +222,151 @@ public partial class PalletBinDemo : Node3D
 		GraspImageOverlay.Draw(pixels, _sensor.Camera, _pick);
 		_hud.ShowImage(SensorImage.ToImage(pixels, _sensor.Camera));
 	}
+
+	private static Vector3 PlacePosition => new(CollarOuterLength / 2f + 0.55f, PlaceTable.TopHeight + 0.09f, 0f);
+
+	/// <summary>Spreads placed links over the table, in rows of three.</summary>
+	private Vector3 NextPlacePosition()
+	{
+		int slot = _statistics.Placed % 9;
+		return PlacePosition + new Vector3((slot % 3 - 1) * 0.18f, 0f, (slot / 3 - 1) * 0.18f);
+	}
+
+	private void StartPick()
+	{
+		if (_sensor?.Result == null)
+		{
+			return;
+		}
+
+		if (_pick.Candidates.Count == 0)
+		{
+			SearchPicks();
+		}
+
+		GraspCandidate? grasp = _pick.Candidates.FirstOrDefault(c => !WasTried(c));
+		if (grasp == null)
+		{
+			GD.Print("INFO Pick: geen bruikbaar pickpunt meer.");
+			_autoPicksLeft = 0;
+			_lastPickSummary = "Geen bruikbaar pickpunt meer";
+			ReportStatistics();
+			RefreshDisplay();
+			FinishAutomaticRun();
+			return;
+		}
+
+		_view = SensorView.Scene3D;
+		_hud.ShowImage(null);
+		_pick.HideDisplay();
+		_markers.Show(_pick);
+		_fullMesh ??= LinkAssets.LoadSingleMesh(LinkAssets.VisualPath);
+		_shapes ??= LinkAssets.LoadCollisionShapes();
+
+		_cycle = new PickCycle(_transforms, _linkMesh!, _fullMesh!, _shapes, grasp, _cup, _pick.Settings.ToolDiameter, NextPlacePosition());
+		_cycle.RegionReady += included => _fillView!.Hide(included, _transforms);
+		_cycle.Lifting += OnLifting;
+		_cycle.Finished += (result, remaining, placed) => _ = OnPickFinishedAsync(grasp, result, remaining, placed);
+		AddChild(_cycle);
+		_hud.SetStatus($"Pick {_statistics.Attempts + 1} bezig...");
+	}
+
+	private bool WasTried(GraspCandidate candidate)
+	{
+		Vector3 point = SensorMount.ToWorldPoint(candidate.X, candidate.Y, candidate.Z);
+		return _failedPoints.Any(failed => failed.DistanceTo(point) < RetryExclusionRadius);
+	}
+
+	private async Task OnPickFinishedAsync(GraspCandidate grasp, PickResult result, List<Transform3D> remaining, Transform3D? placed)
+	{
+		_statistics.Add(result);
+		if (result.Outcome != PickOutcome.Placed)
+		{
+			_failedPoints.Add(SensorMount.ToWorldPoint(grasp.X, grasp.Y, grasp.Z));
+		}
+
+		_lastPickSummary = $"Pick {_statistics.Attempts}: {DescribeOutcome(result.Outcome)}, contactring {result.RingShare * 100f:F0}%; " +
+						   $"{_statistics.Placed} van {_statistics.Attempts} geplaatst";
+		GD.Print($"INFO Pick {_statistics.Attempts}: {DescribeOutcome(result.Outcome)}; contactring {result.RingShare * 100f:F0}%, " +
+				 $"{result.CenterOffset * 1000f:F0} mm uit het midden, meegetrokken {result.PulledAlong}, verstoord {result.Disturbed}");
+
+		_cycle!.QueueFree();
+		_cycle = null;
+		_transforms = remaining;
+		_fillView!.Show(_transforms);
+		if (placed is { } placedTransform)
+		{
+			AddChild(new MeshInstance3D { Mesh = _linkMesh, Transform = placedTransform });
+		}
+
+		// Measure again, because the bin has changed. Wait until the removed bodies are gone.
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await _sensor!.CaptureAsync();
+		_pick.HideDisplay();
+		_sensor.Measure(_sensor.LightParts);
+		_pick.Clear();
+		RefreshDisplay();
+
+		if (_autoPicksLeft > 0)
+		{
+			_autoPicksLeft--;
+			if (_autoPicksLeft > 0)
+			{
+				StartPick();
+				return;
+			}
+		}
+		ReportStatistics();
+		FinishAutomaticRun();
+	}
+
+	private void ReportStatistics()
+	{
+		GD.Print($"INFO Reeks: {_statistics.Placed} van {_statistics.Attempts} geplaatst " +
+				 $"({_statistics.SuccessRate * 100.0:F0}%); geen afdichting {_statistics.Count(PickOutcome.NoSeal)}, " +
+				 $"verloren tijdens tillen {_statistics.Count(PickOutcome.LostDuringLift)}, " +
+				 $"geen schakel {_statistics.Count(PickOutcome.NoPartAtPoint)}; met meegetrokken schakels {_statistics.WithPulledAlong}, " +
+				 $"gemiddeld {_statistics.AverageDisturbed:F1} verstoord");
+	}
+
+	private static string DescribeOutcome(PickOutcome outcome) => outcome switch
+	{
+		PickOutcome.Placed => "geplaatst",
+		PickOutcome.NoSeal => "geen afdichting",
+		PickOutcome.LostDuringLift => "verloren tijdens tillen",
+		_ => "geen schakel gevonden",
+	};
+
+	private void OnLifting()
+	{
+		if (_liftScreenshot != null)
+		{
+			_ = CaptureLiftAsync(_liftScreenshot);
+			_liftScreenshot = null;
+		}
+	}
+
+	private async Task CaptureLiftAsync(string path)
+	{
+		// A moment later, so the part is visibly in the air.
+		await ToSignal(GetTree().CreateTimer(1.6), SceneTreeTimer.SignalName.Timeout);
+		GetViewport().GetTexture().GetImage().SavePng(path);
+	}
+
+	private void FinishAutomaticRun()
+	{
+		if (_quitAfterRun)
+		{
+			string? path = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--screenshot="))?.Split('=')[1];
+			if (path != null)
+			{
+				GetViewport().GetTexture().GetImage().SavePng(path);
+			}
+			GetTree().Quit();
+		}
+	}
+
+	private bool _quitAfterRun;
 
 	private void BuildCamera()
 	{
@@ -222,6 +394,16 @@ public partial class PalletBinDemo : Node3D
 	private async Task CaptureScreenshotIfRequested()
 	{
 		string[] args = OS.GetCmdlineUserArgs();
+		string? runCount = args.FirstOrDefault(a => a.StartsWith("--picks="))?.Split('=')[1];
+		if (runCount != null)
+		{
+			_liftScreenshot = args.FirstOrDefault(a => a.StartsWith("--lift-screenshot="))?.Split('=')[1];
+			_quitAfterRun = true;
+			_autoPicksLeft = int.Parse(runCount);
+			StartPick();
+			return;
+		}
+
 		string? path = args.FirstOrDefault(a => a.StartsWith("--screenshot="))?.Split('=')[1];
 		if (path == null)
 		{

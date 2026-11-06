@@ -21,8 +21,8 @@ depth -> point cloud -> bin filter -> flat candidates -> sealing score
 | 1 | CAD to Godot, links that fall stably | Done |
 | 2 | Pallet with 720 links | Works and is stored; no physics after loading yet |
 | 3 | Depth camera and sensor model | Works; values are illustrative |
-| 4 | First pick with suction cup | Pick point is chosen; the pick itself is missing |
-| 5 | Failure cases and statistics | Not started |
+| 4 | First pick with suction cup | Works in simulation; see [picking.md](picking.md) |
+| 5 | Failure cases and statistics | Outcomes and a series of 10 work; physics artefacts must be reduced before the numbers mean much |
 | 6 | Pose estimation with the CAD model | Not started |
 | 7 | Robot and publication | Not started |
 
@@ -54,5 +54,5 @@ depth -> point cloud -> bin filter -> flat candidates -> sealing score
 
 ## Next step
 
-Perform the pick: let links around the pick point move, apply the suction cup, check the seal and lift. After that,
-several picks in a row and the statistics of phase 5 become possible.
+Reduce the physics artefacts when links are released, and then run many picks over several fills. Only then does a
+success rate mean something, and can the middle requirement be compared with a run without it.

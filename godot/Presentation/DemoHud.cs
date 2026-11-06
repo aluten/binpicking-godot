@@ -32,7 +32,8 @@ public partial class DemoHud : CanvasLayer
 				   "1 = overzicht, 2 = vanaf de sensor, 3 = dichtbij\n" +
 				   "R = vullen starten, nog een keer R = stoppen op deze hoogte\n" +
 				   "4 = 3D / perfecte diepte / sensor, B = zwarte of lichte schakels\n" +
-				   "P = kandidaten (blauw), nog een keer = keuze (groen), nog een keer = verbergen",
+				   "P = kandidaten (blauw), nog een keer = keuze (groen), nog een keer = verbergen\n" +
+				   "G = één pick uitvoeren, A = reeks van 10 picks",
 		});
 	}
 

@@ -1,4 +1,5 @@
 using BinPicking.Core.Grasping;
+using BinPicking.Core.Picking;
 using BinPicking.Core.Sensing;
 
 // Simple tests without extra packages. Run with:
@@ -121,6 +122,23 @@ GraspEvaluation atMiddle = new GraspEvaluator(pickCamera, offCentre, bin, centre
 GraspEvaluation atEdge = new GraspEvaluator(pickCamera, offCentre, bin, centreSettings).Evaluate(222, 200);
 Check("The middle of a surface is accepted", atMiddle.IsAccepted && atMiddle.Candidate!.CenterOffset < 0.003f);
 Check("The evaluator names a location away from the middle", atEdge.Rejection == GraspRejection.OffCenter);
+
+// Suction cup and contact ring.
+var cup = new SuctionCupSpecification { Diameter = 0.03f, VacuumPascal = 40_000f, Efficiency = 0.5f };
+Check("Holding force is pressure x area x efficiency", MathF.Abs(cup.HoldingForce - 14.137f) < 0.01f);
+float?[] fullRing = Enumerable.Repeat<float?>(0.001f, 32).ToArray();
+float?[] brokenRing = Enumerable.Range(0, 32).Select(i => i < 8 ? (float?)null : 0.001f).ToArray();
+float?[] liftedRing = Enumerable.Repeat<float?>(0.01f, 32).ToArray();
+Check("A full ring seals", CupContact.Seals(fullRing, cup));
+Check("A ring with a gap does not seal", !CupContact.Seals(brokenRing, cup));
+Check("A ring above the surface does not seal", !CupContact.Seals(liftedRing, cup));
+Check("An empty ring does not seal", !CupContact.Seals(Array.Empty<float?>(), cup));
+
+var pickStats = new PickStatistics();
+pickStats.Add(new PickResult(PickOutcome.Placed, 1f, 0, 2, 0.001f));
+pickStats.Add(new PickResult(PickOutcome.NoSeal, 0.5f, 3, 4, 0.01f));
+Check("Statistics count outcomes", pickStats.Attempts == 2 && pickStats.Placed == 1 && pickStats.Count(PickOutcome.NoSeal) == 1);
+Check("Statistics give the success rate", Math.Abs(pickStats.SuccessRate - 0.5) < 1e-9 && pickStats.WithPulledAlong == 1 && Math.Abs(pickStats.AverageDisturbed - 3.0) < 1e-9);
 
 var splitStats = DepthSensorStatistics.Compute(shadowed, scene, i => i % 2 == 0);
 Check("Statistics split all pixels into parts and others",
