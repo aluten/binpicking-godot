@@ -14,4 +14,7 @@ public enum MissingReason : byte
 
     /// <summary>The pattern breaks at a depth jump.</summary>
     Edge,
+
+    /// <summary>The pixel clipped, so the pattern cannot be read. Only a real pattern measurement gives this.</summary>
+    Overexposed,
 }

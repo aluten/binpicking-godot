@@ -1,6 +1,7 @@
 using BinPicking.Core.Grasping;
 using BinPicking.Core.Picking;
 using BinPicking.Core.Sensing;
+using BinPicking.Core.StructuredLight;
 
 // Simple tests without extra packages. Run with:
 //   dotnet run --project tests/BinPicking.Core.Tests
@@ -149,8 +150,99 @@ var splitStats = DepthSensorStatistics.Compute(shadowed, scene, i => i % 2 == 0)
 Check("Statistics split all pixels into parts and others",
     splitStats.PartPixels + splitStats.OtherPixels == scene.Length && splitStats.PartMissing <= splitStats.PartPixels);
 
+// Structured light: a flat plate lit by the real patterns, decoded from the images alone.
+var lightSettings = new StructuredLightSettings();
+var lightCamera = PinholeCamera.FromVerticalFov(320, 240, 35f);
+var projector = new ProjectorModel(lightSettings.Columns, MathF.Tan(35f * MathF.PI / 180f), 0.15f);
+var patterns = new PatternGenerator(lightSettings);
+var sensor = new CameraNoiseSettings();
+
+Check("The default patterns take 11 images", lightSettings.ImageCount == 11);
+Check("The stripes of neighbouring columns differ in at most one bit", Enumerable.Range(1, 127)
+    .All(s => System.Numerics.BitOperations.PopCount((uint)(GrayOf(s) ^ GrayOf(s - 1))) == 1));
+
+const float CleanLight = 1.5f;
+DepthSensorResult clean = DecodePlate(2f, CleanLight, null);
+Check("Without noise the plate is measured everywhere", MeasuredShare(clean) > 0.99);
+Check($"Without noise the depth is correct within 1 mm (worst {WorstError(clean, 2f) * 1000f:F2} mm)", WorstError(clean, 2f) < 0.001f);
+Check("Triangulation finds another distance too", WorstError(DecodePlate(1.2f, CleanLight, null), 1.2f) < 0.001f);
+
+DepthSensorResult bright = DecodePlate(2f, 1.5f, sensor);
+DepthSensorResult dark = DecodePlate(2f, 0.05f, sensor);
+Check("A bright plate under noise is still measured everywhere", MeasuredShare(bright) > 0.99);
+Check($"Black is noisier than white ({DepthError(dark, 2f) * 1000f:F1} mm against {DepthError(bright, 2f) * 1000f:F1} mm)",
+    DepthError(dark, 2f) > 2.0 * DepthError(bright, 2f));
+Check("Almost no light gives holes for low signal", DecodePlate(2f, 0.0005f, sensor).Missing.Count(m => m == MissingReason.LowSignal) > lightCamera.Width * lightCamera.Height / 2);
+Check("Too much light gives holes for overexposure", DecodePlate(2f, 10f, sensor).Missing.Count(m => m == MissingReason.Overexposed) > lightCamera.Width * lightCamera.Height / 2);
+Check("The same seed gives the same noise", CameraNoiseModel.Expose(new[] { 0.3f, 0.1f }, sensor, 5).SequenceEqual(CameraNoiseModel.Expose(new[] { 0.3f, 0.1f }, sensor, 5)));
+
+float[] step = Enumerable.Range(0, lightCamera.Width * lightCamera.Height)
+    .Select(i => i % lightCamera.Width < lightCamera.Width / 2 ? 1.8f : 2f).ToArray();
+DepthSensorResult stepped = DecodeDepths(step, CleanLight, null);
+Check("A depth step is measured on both sides", WorstErrorAgainst(stepped, step, 3) < 0.001f);
+
+bool wrongCount = false;
+try
+{
+    PatternDecoder.Decode(lightCamera, projector, lightSettings, new[] { new float[1] });
+}
+catch (ArgumentException)
+{
+    wrongCount = true;
+}
+Check("A wrong number of images throws", wrongCount);
+
 Console.WriteLine(failures == 0 ? "RESULT: PASSED" : $"RESULT: {failures} TESTS FAILED");
 return failures == 0 ? 0 : 1;
+
+int GrayOf(int stripe) => stripe ^ (stripe >> 1);
+
+DepthSensorResult DecodePlate(float z, float light, CameraNoiseSettings? noise) =>
+    DecodeDepths(Enumerable.Repeat(z, lightCamera.Width * lightCamera.Height).ToArray(), light, noise);
+
+// Renders the scene by hand: each pixel receives the pattern value of the column that lights its point.
+DepthSensorResult DecodeDepths(float[] depths, float light, CameraNoiseSettings? noise)
+{
+    var images = new List<float[]>();
+    for (int image = 0; image < lightSettings.ImageCount; image++)
+    {
+        var lit = new float[depths.Length];
+        for (int i = 0; i < depths.Length; i++)
+        {
+            (float x, _) = lightCamera.Unproject(i % lightCamera.Width, i / lightCamera.Width, depths[i]);
+            lit[i] = light * patterns.Value(image, projector.PositionOf(x, depths[i]));
+        }
+        images.Add(noise == null
+            ? lit.Select(v => MathF.Min(v / 2f, 1f)).ToArray()
+            : CameraNoiseModel.Expose(lit, noise, 100 + image));
+    }
+    return PatternDecoder.Decode(lightCamera, projector, lightSettings, images);
+}
+
+double MeasuredShare(DepthSensorResult result) => result.Depth.Count(d => !float.IsNaN(d)) / (double)result.Depth.Length;
+
+float WorstError(DepthSensorResult result, float z) => result.Depth.Where(d => !float.IsNaN(d)).Max(d => MathF.Abs(d - z));
+
+// Ignores pixels right next to the depth step.
+float WorstErrorAgainst(DepthSensorResult result, float[] truth, int margin)
+{
+    float worst = 0f;
+    int width = lightCamera.Width;
+    for (int i = 0; i < truth.Length; i++)
+    {
+        if (Math.Abs(i % width - width / 2) > margin && !float.IsNaN(result.Depth[i]))
+        {
+            worst = MathF.Max(worst, MathF.Abs(result.Depth[i] - truth[i]));
+        }
+    }
+    return worst;
+}
+
+double DepthError(DepthSensorResult result, float z)
+{
+    float[] measured = result.Depth.Where(d => !float.IsNaN(d)).ToArray();
+    return Math.Sqrt(measured.Average(d => (double)((d - z) * (d - z))));
+}
 
 int FirstMeasured(float[] d)
 {

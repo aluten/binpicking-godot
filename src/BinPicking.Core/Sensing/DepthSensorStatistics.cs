@@ -8,10 +8,11 @@ public sealed record DepthSensorStatistics(
     int PartEdge,
     int OtherPixels,
     int OtherMissing,
-    double PartNoiseMeters)
+    double PartNoiseMeters,
+    int PartOverexposed = 0)
 {
     /// <summary>Pixels on parts without a measurement, whatever the reason.</summary>
-    public int PartMissing => PartLowSignal + PartShadow + PartEdge;
+    public int PartMissing => PartLowSignal + PartShadow + PartEdge + PartOverexposed;
 
     /// <summary>Counts the holes per reason and computes the depth error against perfect depth.</summary>
     /// <param name="result">The measurement.</param>
@@ -19,7 +20,7 @@ public sealed record DepthSensorStatistics(
     /// <param name="isPart">Tells whether a pixel index lies on a part.</param>
     public static DepthSensorStatistics Compute(DepthSensorResult result, float[] idealDepth, Func<int, bool> isPart)
     {
-        int parts = 0, low = 0, shadow = 0, edge = 0, other = 0, otherMissing = 0, measured = 0;
+        int parts = 0, low = 0, shadow = 0, edge = 0, over = 0, other = 0, otherMissing = 0, measured = 0;
         double squaredError = 0;
         for (int i = 0; i < result.Depth.Length; i++)
         {
@@ -45,6 +46,9 @@ public sealed record DepthSensorStatistics(
                 case MissingReason.Edge:
                     edge++;
                     break;
+                case MissingReason.Overexposed:
+                    over++;
+                    break;
                 default:
                     double error = result.Depth[i] - idealDepth[i];
                     squaredError += error * error;
@@ -54,6 +58,6 @@ public sealed record DepthSensorStatistics(
         }
 
         double noise = measured == 0 ? 0.0 : Math.Sqrt(squaredError / measured);
-        return new DepthSensorStatistics(parts, low, shadow, edge, other, otherMissing, noise);
+        return new DepthSensorStatistics(parts, low, shadow, edge, other, otherMissing, noise, over);
     }
 }

@@ -37,6 +37,7 @@ entirely in simulation.
 | [docs/cad-pipeline.md](docs/cad-pipeline.md) | How a STEP file becomes a usable link |
 | [docs/bin.md](docs/bin.md) | How the pallet is built and filled, and the controls |
 | [docs/sensor-model.md](docs/sensor-model.md) | How the virtual camera measures black parts |
+| [docs/structured-light.md](docs/structured-light.md) | Experiment: measuring depth with projected light |
 | [docs/pick-point.md](docs/pick-point.md) | How a pick point is chosen and verified |
 | [docs/picking.md](docs/picking.md) | How a pick is performed, its models and its limits |
 | [docs/theory.md](docs/theory.md) | The theory behind the overlay and pick strategy, with sources |
