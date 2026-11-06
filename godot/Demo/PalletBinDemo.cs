@@ -22,6 +22,8 @@ public partial class PalletBinDemo : Node3D
 	}
 
 	private readonly PickSelection _pick = new();
+	private LinkAppearance _appearance = null!;
+	private bool _measuring;
 	private Mesh? _linkMesh;
 	private OrbitCamera _camera = null!;
 	private DemoHud _hud = null!;
@@ -54,6 +56,7 @@ public partial class PalletBinDemo : Node3D
 			return;
 		}
 
+		_appearance = new LinkAppearance(_linkMesh);
 		AddChild(new DemoEnvironment());
 		AddChild(new PalletBin());
 		_markers = new GraspMarkers();
@@ -96,16 +99,16 @@ public partial class PalletBinDemo : Node3D
 			case Key.Key4:
 				NextSensorView();
 				break;
-			case Key.B when _sensor != null:
-				MeasureAndRefresh(!_sensor.LightParts);
+			case Key.B when _sensor != null && _cycle == null && !_measuring:
+				_ = ToggleColorAsync();
 				break;
-			case Key.P when _cycle == null:
+			case Key.P when _cycle == null && !_measuring:
 				NextPickMode();
 				break;
-			case Key.G when _cycle == null:
+			case Key.G when _cycle == null && !_measuring:
 				StartPick();
 				break;
-			case Key.A when _cycle == null:
+			case Key.A when _cycle == null && !_measuring:
 				_autoPicksLeft = AutoPickCount;
 				StartPick();
 				break;
@@ -162,21 +165,29 @@ public partial class PalletBinDemo : Node3D
 		var rig = new DepthSensorRig();
 		AddChild(rig);
 		var sensor = new SensorMeasurement(rig);
-		await sensor.CaptureAsync();
 		_sensor = sensor;
-		MeasureAndRefresh(lightParts: false);
+		await MeasureAsync();
 		await CaptureScreenshotIfRequested();
 	}
 
-	private void MeasureAndRefresh(bool lightParts)
+	/// <summary>The sensor measures the scene again, because something in it has changed.</summary>
+	private async Task MeasureAsync()
 	{
-		_sensor!.Measure(lightParts);
+		_measuring = true;
+		await _sensor!.MeasureAsync(_appearance.IsWhite ? "witte schakels" : "zwarte schakels");
+		_measuring = false;
 		_pick.Clear();
 		if (_pick.Mode != PickDisplayMode.Hidden)
 		{
 			SearchPicks();
 		}
 		RefreshDisplay();
+	}
+
+	private async Task ToggleColorAsync()
+	{
+		_appearance.SetWhite(!_appearance.IsWhite);
+		await MeasureAsync();
 	}
 
 	private void NextPickMode()
@@ -305,11 +316,8 @@ public partial class PalletBinDemo : Node3D
 
 		// Measure again, because the bin has changed. Wait until the removed bodies are gone.
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-		await _sensor!.CaptureAsync();
 		_pick.HideDisplay();
-		_sensor.Measure(_sensor.LightParts);
-		_pick.Clear();
-		RefreshDisplay();
+		await MeasureAsync();
 
 		if (_autoPicksLeft > 0)
 		{
@@ -405,6 +413,10 @@ public partial class PalletBinDemo : Node3D
 			_liftScreenshot = args.FirstOrDefault(a => a.StartsWith("--lift-screenshot="))?.Split('=')[1];
 			_quitAfterRun = true;
 			_autoPicksLeft = int.Parse(runCount);
+			if (args.Contains("--white"))
+			{
+				await ToggleColorAsync();
+			}
 			StartPick();
 			return;
 		}
@@ -415,7 +427,7 @@ public partial class PalletBinDemo : Node3D
 			return;
 		}
 
-		ApplyScreenshotView(args.FirstOrDefault(a => a.StartsWith("--view="))?.Split('=')[1] ?? "overview");
+		await ApplyScreenshotViewAsync(args.FirstOrDefault(a => a.StartsWith("--view="))?.Split('=')[1] ?? "overview");
 		for (int i = 0; i < 6; i++)
 		{
 			await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
@@ -424,7 +436,7 @@ public partial class PalletBinDemo : Node3D
 		GetTree().Quit();
 	}
 
-	private void ApplyScreenshotView(string view)
+	private async Task ApplyScreenshotViewAsync(string view)
 	{
 		switch (view)
 		{
@@ -446,6 +458,13 @@ public partial class PalletBinDemo : Node3D
 			case "candidates":
 				NextPickMode();
 				break;
+			case "white":
+				await ToggleColorAsync();
+				break;
+			case "white-black":
+				await ToggleColorAsync();
+				await ToggleColorAsync();
+				break;
 			case "best":
 				NextPickMode();
 				NextPickMode();
@@ -456,7 +475,7 @@ public partial class PalletBinDemo : Node3D
 				_view = view == "perfect" ? SensorView.PerfectDepth : SensorView.Measured;
 				if (view == "light")
 				{
-					MeasureAndRefresh(lightParts: true);
+					await ToggleColorAsync();
 				}
 				NextPickMode();
 				NextPickMode();

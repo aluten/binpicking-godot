@@ -44,6 +44,7 @@ holes and noise:
 | Depth from the camera | The perfect depth |
 | Depth from the projector position | Where projector shadow falls |
 | Colour without lighting | How much light a surface returns |
+| Links only | Which pixels show a link, for the statistics |
 
 The "projector" is therefore a second virtual camera that only serves to find shadow. The holes resemble those of
 structured light, but they come from a simplified formula, not from simulating light.
@@ -80,7 +81,7 @@ The settings are in `DepthSensorSettings.cs`.
 ## Viewing
 
 Open `Scenes/pallet_bin.tscn` and press F6. Key **4** switches between 3D, perfect depth and sensor. Key **B**
-switches between black and light links. The sensor hangs 1.5 m above the rim, with a 1280 x 960 image.
+really changes the colour of the links, after which the sensor measures again. The sensor hangs 1.5 m above the rim, with a 1280 x 960 image.
 
 ## Result on the full reference fill
 
@@ -88,9 +89,9 @@ Rendered with a software renderer on the Linux cloud computer:
 
 | Links | Without measurement | Low light | Shadow | Edge | Noise |
 |---|---:|---:|---:|---:|---:|
-| Black | 57% | 43% | 8% | 5% | 0.5 mm |
-| Light | 15% | 1% | 8% | 5% | 0.3 mm |
+| Black | 58% | 44% | 8% | 5% | 0.5 mm |
+| White | 14% | 1% | 8% | 5% | 0.3 mm |
 
-Wood and background: 4% without measurement. These depend on the fill: a higher pile is closer to the camera and returns more light. Because of rounding, the percentages do not always add up exactly.
+Wood and background: 3% without measurement. These depend on the fill: a higher pile is closer to the camera and returns more light. Because of rounding, the percentages do not always add up exactly.
 Flat surfaces facing the camera keep the most measurements, and those are exactly the surfaces a suction cup
 fits on.

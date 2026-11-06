@@ -9,6 +9,7 @@ public partial class BinFillView : MultiMeshInstance3D
     public BinFillView(Mesh linkMesh, IReadOnlyList<Transform3D> transforms)
     {
         _linkMesh = linkMesh;
+        Layers = 1u | (1u << (DepthSensorRig.LinkLayer - 1));
         Show(transforms);
     }
 

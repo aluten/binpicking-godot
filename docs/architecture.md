@@ -57,6 +57,7 @@ the same algorithms.
 | | `BinFillView` | Draws a stored fill |
 | | `BinFillInspector` | Checks a fill geometrically |
 | `Links` | `LinkAssets` | Loads the generated link files |
+| | `LinkAppearance` | The colour of all links |
 | `Sensor` | `DepthSensorRig` | Renders perfect depth and reflectance |
 | | `SensorRigModel` | Shows the named camera and projector in the overview |
 | | `SensorMount` | Sensor position and the camera-to-world mapping |

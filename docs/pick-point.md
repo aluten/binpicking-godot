@@ -46,16 +46,16 @@ With key R you can make a lower fill and compare.
 
 On the Linux cloud computer, with fixed fills and one seed:
 
-| | Full, black | Full, light |
+| | Full, black | Full, white |
 |---|---:|---:|
-| Evaluated | 8,492 | 16,903 |
+| Evaluated | 8,492 | 17,009 |
 | Too few measurements | 168 | 0 |
-| Not flat | 4,096 | 11,757 |
-| Too tilted | 1,709 | 2,990 |
-| Not near the middle | 1,083 | 794 |
-| Holder hits | 686 | 550 |
+| Not flat | 4,096 | 11,901 |
+| Too tilted | 1,709 | 2,964 |
+| Not near the middle | 1,083 | 788 |
+| Holder hits | 686 | 543 |
 | Outside the opening | 61 | 85 |
-| Accepted | 689 | 727 |
+| Accepted | 689 | 728 |
 | Best candidates with at least 90% seal | 17 of 20 | 17 of 20 |
 
 An earlier fill with 96 links on black had only 3 accepted places out of 262 evaluated, all three sealing, with 238 places

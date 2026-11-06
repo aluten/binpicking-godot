@@ -1,21 +1,18 @@
 #nullable enable
 
-using System.Linq;
 using System.Threading.Tasks;
 using BinPicking.Core.Sensing;
 using Godot;
 using static PalletDimensions;
 
-/// <summary>Captures perfect depth once and derives measurements from it for black or light parts.</summary>
+/// <summary>Captures what the sensor sees and turns it into a realistic measurement.</summary>
 public sealed class SensorMeasurement
 {
-    private const float PartReflectanceLimit = 0.2f;
-    private const float LightPartReflectance = 0.5f;
-
     private readonly DepthSensorSettings _settings = new();
     private readonly DepthSensorRig _rig;
     private float[] _projectorDepth = System.Array.Empty<float>();
     private float[] _reflectance = System.Array.Empty<float>();
+    private bool[] _isPart = System.Array.Empty<bool>();
 
     public SensorMeasurement(DepthSensorRig rig)
     {
@@ -29,26 +26,16 @@ public sealed class SensorMeasurement
 
     public DepthSensorResult? Result { get; private set; }
 
-    public bool LightParts { get; private set; }
-
     public string Summary { get; private set; } = string.Empty;
 
-    public async Task CaptureAsync()
+    /// <summary>Captures the scene as it is now, including the colour of the links, and applies the sensor model.</summary>
+    /// <param name="partName">How to call the links in the summary.</param>
+    public async Task MeasureAsync(string partName)
     {
-        (IdealDepth, _projectorDepth, _reflectance) = await _rig.CaptureAsync();
+        (IdealDepth, _projectorDepth, _reflectance, _isPart) = await _rig.CaptureAsync();
         CheckRimDistance();
-    }
-
-    /// <summary>Applies the sensor model again, optionally pretending the parts are light.</summary>
-    public void Measure(bool lightParts)
-    {
-        LightParts = lightParts;
-        float[] reflectance = lightParts
-            ? _reflectance.Select(r => r < PartReflectanceLimit ? LightPartReflectance : r).ToArray()
-            : _reflectance;
-
-        Result = DepthSensorModel.Apply(Camera, IdealDepth, _projectorDepth, reflectance, _settings);
-        Report(Result);
+        Result = DepthSensorModel.Apply(Camera, IdealDepth, _projectorDepth, _reflectance, _settings);
+        Report(Result, partName);
     }
 
     /// <summary>The top of the rim has a known height, which verifies the whole chain.</summary>
@@ -62,14 +49,13 @@ public sealed class SensorMeasurement
                  $"verwacht {SensorMount.AboveRim * 1000f:F0} mm");
     }
 
-    private void Report(DepthSensorResult result)
+    private void Report(DepthSensorResult result, string partName)
     {
         DepthSensorStatistics stats = DepthSensorStatistics.Compute(
-            result, IdealDepth, i => _reflectance[i] < PartReflectanceLimit);
+            result, IdealDepth, i => _isPart[i]);
 
         double Percent(int value, int total) => total == 0 ? 0.0 : 100.0 * value / total;
-        string kind = LightParts ? "lichte schakels" : "zwarte schakels";
-        Summary = $"{kind}: {Percent(stats.PartMissing, stats.PartPixels):F0}% zonder meting " +
+        Summary = $"{partName}: {Percent(stats.PartMissing, stats.PartPixels):F0}% zonder meting " +
                   $"(weinig licht {Percent(stats.PartLowSignal, stats.PartPixels):F0}%, " +
                   $"schaduw {Percent(stats.PartShadow, stats.PartPixels):F0}%, " +
                   $"rand {Percent(stats.PartEdge, stats.PartPixels):F0}%), " +

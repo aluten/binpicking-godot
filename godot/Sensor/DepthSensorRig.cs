@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BinPicking.Core.Sensing;
 using Godot;
@@ -13,6 +14,7 @@ public partial class DepthSensorRig : Node3D
 {
     public const int DepthLayer = 2;
     public const int ModelLayer = 4;
+    public const int LinkLayer = 3;
 
     private const int ImageWidth = 1280;
     private const int ImageHeight = 960;
@@ -43,6 +45,7 @@ void fragment() {
     private SubViewport _cameraDepth = null!;
     private SubViewport _projectorDepth = null!;
     private SubViewport _albedo = null!;
+    private SubViewport _partMask = null!;
 
     public PinholeCamera Camera { get; private set; }
 
@@ -53,14 +56,16 @@ void fragment() {
 
         _cameraDepth = AddView(position, verticalFovDegrees, depthPass: true);
         _projectorDepth = AddView(position + Vector3.Right * projectorBaseline, verticalFovDegrees, depthPass: true);
-        _albedo = AddView(position, verticalFovDegrees, depthPass: false);
+        _albedo = AddView(position, verticalFovDegrees, depthPass: false, 1u);
         _albedo.DebugDraw = Viewport.DebugDrawEnum.Unshaded;
+        _partMask = AddView(position, verticalFovDegrees, depthPass: false, 1u << (LinkLayer - 1));
+        _partMask.DebugDraw = Viewport.DebugDrawEnum.Unshaded;
 
         AddChild(new SensorRigModel(Camera, position, projectorBaseline, SensorMount.AboveRim));
     }
 
-    /// <summary>Renders once and returns depth from camera and projector, and the reflectance.</summary>
-    public async Task<(float[] Depth, float[] ProjectorDepth, float[] Reflectance)> CaptureAsync()
+    /// <summary>Renders once and returns depth from camera and projector, the reflectance, and which pixels show a link.</summary>
+    public async Task<(float[] Depth, float[] ProjectorDepth, float[] Reflectance, bool[] IsPart)> CaptureAsync()
     {
         SetUpdating(SubViewport.UpdateMode.Always);
         for (int i = 0; i < 4; i++)
@@ -70,9 +75,10 @@ void fragment() {
         Image depth = _cameraDepth.GetTexture().GetImage();
         Image projector = _projectorDepth.GetTexture().GetImage();
         Image albedo = _albedo.GetTexture().GetImage();
+        Image mask = _partMask.GetTexture().GetImage();
         SetUpdating(SubViewport.UpdateMode.Disabled);
 
-        return (ReadDepth(depth), ReadDepth(projector), ReadReflectance(albedo));
+        return (ReadDepth(depth), ReadDepth(projector), ReadReflectance(albedo), ReadReflectance(mask).Select(r => r > 0f).ToArray());
     }
 
     private void SetUpdating(SubViewport.UpdateMode mode)
@@ -80,9 +86,10 @@ void fragment() {
         _cameraDepth.RenderTargetUpdateMode = mode;
         _projectorDepth.RenderTargetUpdateMode = mode;
         _albedo.RenderTargetUpdateMode = mode;
+        _partMask.RenderTargetUpdateMode = mode;
     }
 
-    private SubViewport AddView(Vector3 position, float verticalFovDegrees, bool depthPass)
+    private SubViewport AddView(Vector3 position, float verticalFovDegrees, bool depthPass, uint cullMask = 0u)
     {
         var viewport = new SubViewport
         {
@@ -103,7 +110,7 @@ void fragment() {
             Far = EncodedRange,
             Position = position,
             RotationDegrees = new Vector3(-90f, 0f, 0f),
-            CullMask = depthPass ? 1u | (1u << (DepthLayer - 1)) : 1u,
+            CullMask = depthPass ? 1u | (1u << (DepthLayer - 1)) : cullMask,
             Environment = new Godot.Environment
             {
                 BackgroundMode = Godot.Environment.BGMode.Color,
