@@ -41,6 +41,33 @@ public static class SensorImage
         return pixels;
     }
 
+    /// <summary>
+    /// Draws one camera image as grey. The brightness is stretched so the brightest 1% is white, otherwise black
+    /// links would hardly be visible. Clipped pixels are orange.
+    /// </summary>
+    public static byte[] DrawCameraImage(float[] image, float saturationLevel)
+    {
+        float[] sorted = (float[])image.Clone();
+        System.Array.Sort(sorted);
+        float white = Mathf.Max(sorted[(int)(sorted.Length * 0.99f)], 1e-4f);
+        var pixels = new byte[image.Length * 3];
+        for (int i = 0; i < image.Length; i++)
+        {
+            if (image[i] >= saturationLevel)
+            {
+                pixels[i * 3] = 250;
+                pixels[i * 3 + 1] = 130;
+                pixels[i * 3 + 2] = 20;
+                continue;
+            }
+            byte v = (byte)(Mathf.Clamp(image[i] / white, 0f, 1f) * 255f);
+            pixels[i * 3] = v;
+            pixels[i * 3 + 1] = v;
+            pixels[i * 3 + 2] = v;
+        }
+        return pixels;
+    }
+
     /// <summary>Wraps RGB bytes in a Godot image.</summary>
     public static Image ToImage(byte[] pixels, PinholeCamera camera) =>
         Image.CreateFromData(camera.Width, camera.Height, false, Image.Format.Rgb8, pixels);

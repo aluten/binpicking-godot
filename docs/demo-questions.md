@@ -80,6 +80,7 @@ built here.
   pixels with a formula: reflectance x cos(angle) x (reference distance / distance)². See [sensor-model.md](sensor-model.md).
 - **Projected light:** a spot light projects 11 patterns one after another (4 shifted sines, 7 Gray code stripes) and a
   camera takes an image of each. Sensor noise is added and the depth is decoded and triangulated from the images alone.
+  Key **K** shows those camera images one by one, and key **E** changes the exposure, including HDR with two exposures.
   See [structured-light.md](structured-light.md). The physics of the light is simplified: no reflections between links,
   no lens blur, and the noise values are assumptions.
 

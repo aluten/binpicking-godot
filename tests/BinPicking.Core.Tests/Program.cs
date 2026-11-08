@@ -192,6 +192,22 @@ catch (ArgumentException)
 }
 Check("A wrong number of images throws", wrongCount);
 
+// HDR: one short and one long exposure of the same plate.
+var shortExposure = new CameraNoiseSettings { ElectronsPerLightUnit = 400f };
+var longExposure = new CameraNoiseSettings { ElectronsPerLightUnit = 4000f };
+DepthSensorResult brightShort = DecodePlate(2f, 10f, shortExposure);
+DepthSensorResult brightLong = DecodePlate(2f, 10f, longExposure);
+DepthSensorResult brightHdr = HdrCombiner.Combine(new[] { brightShort, brightLong });
+Check("HDR measures a bright plate that the long exposure overexposes",
+    MeasuredShare(brightLong) < 0.01 && MeasuredShare(brightHdr) > 0.99);
+DepthSensorResult darkShort = DecodePlate(2f, 0.1f, shortExposure);
+DepthSensorResult darkLong = DecodePlate(2f, 0.1f, longExposure);
+DepthSensorResult darkHdr = HdrCombiner.Combine(new[] { darkShort, darkLong });
+Check($"HDR takes the long exposure on a dark plate ({DepthError(darkHdr, 2f) * 1000f:F1} mm, short alone {DepthError(darkShort, 2f) * 1000f:F1} mm)",
+    MeasuredShare(darkHdr) >= MeasuredShare(darkShort) && DepthError(darkHdr, 2f) <= DepthError(darkLong, 2f) + 1e-6);
+DepthSensorResult nothing = HdrCombiner.Combine(new[] { DecodePlate(2f, 0.0005f, shortExposure), DecodePlate(2f, 0.0005f, longExposure) });
+Check("Without light HDR reports low signal", nothing.Missing.Count(m => m == MissingReason.LowSignal) > lightCamera.Width * lightCamera.Height / 2);
+
 Console.WriteLine(failures == 0 ? "RESULT: PASSED" : $"RESULT: {failures} TESTS FAILED");
 return failures == 0 ? 0 : 1;
 

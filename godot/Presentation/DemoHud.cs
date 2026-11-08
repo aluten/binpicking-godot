@@ -16,6 +16,7 @@ public partial class DemoHud : CanvasLayer
         "1 = overzicht, 2 = vanaf de sensor, 3 = dichtbij\n" +
         "4 = 3D / perfecte diepte / sensor, B = zwarte of witte schakels\n" +
         "L = sensor: formule of geprojecteerd licht\n" +
+        "E = belichting kort / middel / lang / HDR, K = camerabeelden één voor één (bij licht)\n" +
         "P = kandidaten (blauw), nog een keer = keuze (groen), nog een keer = verbergen\n" +
         "G = één pick uitvoeren, A = reeks van 10 picks\n" +
         "R = vullen starten, nog een keer R = stoppen op deze hoogte\n" +

@@ -37,7 +37,7 @@ the same algorithms.
 | | `DepthSensorSettings` | Settings of the sensor model |
 | | `DepthSensorResult`, `MissingReason` | Measured depth, and why a pixel has none |
 | | `DepthSensorStatistics` | Summarises a measurement |
-| `StructuredLight` | `PatternGenerator`, `PatternDecoder`, `ProjectorModel`, `CameraNoiseModel` | Experiment: depth from projected patterns; see [structured-light.md](structured-light.md) |
+| `StructuredLight` | `PatternGenerator`, `PatternDecoder`, `ProjectorModel`, `CameraNoiseModel`, `HdrCombiner` | Experiment: depth from projected patterns; see [structured-light.md](structured-light.md) |
 | `Picking` | `SuctionCupSpecification`, `CupContact` | What a cup can hold, and the contact-ring test |
 | | `PickOutcome`, `PickResult`, `PickStatistics` | Pick results |
 | `Grasping` | `GraspEvaluator` | **Judges one location**: names the failed requirement or returns a candidate |

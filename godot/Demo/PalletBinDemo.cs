@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BinPicking.Core.Grasping;
 using BinPicking.Core.Picking;
+using BinPicking.Core.StructuredLight;
 using Godot;
 using static PalletDimensions;
 
@@ -63,6 +64,7 @@ public partial class PalletBinDemo : Node3D
     private readonly List<Vector3> _failedPoints = new();
     private List<Transform3D> _transforms = new();
     private SensorView _view = SensorView.Scene3D;
+    private int _patternImage = -1; // The camera image shown with key K, or -1 for none.
     private bool _measuring;
     private int _autoPicksLeft;
     private string _lastPickSummary = string.Empty;
@@ -123,6 +125,12 @@ public partial class PalletBinDemo : Node3D
                 break;
             case Key.L when _sensor != null && _cycle == null && !_measuring:
                 _ = ToggleSensorKindAsync();
+                break;
+            case Key.E when _sensor?.Kind == SensorKind.ProjectedLight && _cycle == null && !_measuring:
+                _ = NextExposureAsync();
+                break;
+            case Key.K when _sensor?.PatternImages.Count > 0 && !_measuring:
+                NextPatternImage();
                 break;
             case Key.B when _sensor != null && _cycle == null && !_measuring:
                 _ = ToggleColorAsync();
@@ -194,9 +202,15 @@ public partial class PalletBinDemo : Node3D
         var lightRig = new ProjectedLightRig();
         AddChild(lightRig);
         _sensor = new SensorMeasurement(rig, lightRig, _linkMesh!);
-        if (OS.GetCmdlineUserArgs().Contains("--light"))
+        string[] args = OS.GetCmdlineUserArgs();
+        if (args.Contains("--light"))
         {
             _sensor.Kind = SensorKind.ProjectedLight;
+        }
+        string? exposure = args.FirstOrDefault(a => a.StartsWith("--exposure="))?.Split('=')[1];
+        if (exposure != null)
+        {
+            _sensor.ExposureIndex = int.Parse(exposure);
         }
         await MeasureAsync();
         await CaptureScreenshotIfRequested();
@@ -206,6 +220,7 @@ public partial class PalletBinDemo : Node3D
     private async Task MeasureAsync()
     {
         _measuring = true;
+        _patternImage = -1;
         if (_sensor!.Kind == SensorKind.ProjectedLight)
         {
             _hud.SetStatus("Meten met geprojecteerd licht ...");
@@ -232,6 +247,24 @@ public partial class PalletBinDemo : Node3D
     {
         _sensor!.Kind = _sensor.Kind == SensorKind.Formula ? SensorKind.ProjectedLight : SensorKind.Formula;
         await MeasureAsync();
+    }
+
+    /// <summary>Key E: the next exposure setting, and measures again.</summary>
+    private async Task NextExposureAsync()
+    {
+        _sensor!.ExposureIndex = (_sensor.ExposureIndex + 1) % SensorMeasurement.Exposures.Length;
+        await MeasureAsync();
+    }
+
+    /// <summary>Key K: shows the camera images of the measurement one by one, then the normal view again.</summary>
+    private void NextPatternImage()
+    {
+        _patternImage++;
+        if (_patternImage >= _sensor!.PatternImages.Count)
+        {
+            _patternImage = -1;
+        }
+        RefreshDisplay();
     }
 
     /// <summary>Key P: nothing, then all candidates, then also the choice. The search runs at the first step.</summary>
@@ -270,6 +303,16 @@ public partial class PalletBinDemo : Node3D
         string pickLine = _lastPickSummary.Length > 0 ? $"\n{_lastPickSummary}" : string.Empty;
         _hud.SetStatus($"{_sensor!.Summary}\n{_pick.Summary}{pickLine}");
         _markers.ShowPicks(_pick);
+
+        if (_patternImage >= 0)
+        {
+            int count = _sensor.PatternImages.Count;
+            _hud.SetStatus($"Camerabeeld {_patternImage + 1} van {count}: {_sensor.DescribePattern(_patternImage)}\n" +
+                           "Helderheid opgerekt; oranje = overbelicht. K = volgende beeld");
+            byte[] camera = SensorImage.DrawCameraImage(_sensor.PatternImages[_patternImage], new StructuredLightSettings().SaturationLevel);
+            _hud.ShowImage(SensorImage.ToImage(camera, _sensor.Camera));
+            return;
+        }
 
         if (_view == SensorView.Scene3D)
         {
@@ -463,7 +506,8 @@ public partial class PalletBinDemo : Node3D
     /// For automated checks, without keys. Takes a screenshot with
     /// <c>godot ... -- --screenshot=path.png --view=name</c>, or runs a series with
     /// <c>godot ... -- --picks=20 [--white] [--lift-screenshot=path.png] [--screenshot=path.png]</c>.
-    /// Add <c>--light</c> to measure with projected light instead of the formula.
+    /// Add <c>--light</c> to measure with projected light instead of the formula, and <c>--exposure=3</c> to choose
+    /// an exposure setting (0 short, 1 medium, 2 long, 3 HDR). View <c>pattern-N</c> shows camera image N.
     /// </summary>
     private async Task CaptureScreenshotIfRequested()
     {
@@ -530,6 +574,10 @@ public partial class PalletBinDemo : Node3D
             case "best":
                 NextPickMode();
                 NextPickMode();
+                break;
+            case string pattern when pattern.StartsWith("pattern-"):
+                _patternImage = int.Parse(pattern["pattern-".Length..]);
+                RefreshDisplay();
                 break;
             case "perfect":
             case "measured":

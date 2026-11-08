@@ -40,10 +40,37 @@ public sealed class SensorMeasurement
     public SensorKind Kind { get; set; } = SensorKind.Formula;
 
     /// <summary>
-    /// The image sensor of the projected-light measurement. The exposure suits black links; white links then
-    /// overexpose, which is the trade-off that real cameras solve with several exposures.
+    /// The exposures that key E steps through, in electrons per unit of light. Medium suits black links and
+    /// overexposes white ones; HDR combines short and long. The values are own choices, not camera settings.
     /// </summary>
-    public CameraNoiseSettings Noise { get; set; } = new() { ElectronsPerLightUnit = 16000f };
+    public static readonly (string Name, float[] Electrons)[] Exposures =
+    {
+        ("kort", new[] { 4000f }),
+        ("middel", new[] { 16000f }),
+        ("lang", new[] { 64000f }),
+        ("HDR kort + lang", new[] { 4000f, 64000f }),
+    };
+
+    /// <summary>Which of <see cref="Exposures"/> the next projected-light measurement uses.</summary>
+    public int ExposureIndex { get; set; } = 1;
+
+    /// <summary>
+    /// The camera images of the latest projected-light measurement, as the decoder received them, from 0 to 1.
+    /// With HDR these are the images of the longest exposure. Empty after a formula measurement.
+    /// </summary>
+    public IReadOnlyList<float[]> PatternImages { get; private set; } = System.Array.Empty<float[]>();
+
+    /// <summary>The number of images a real camera would take for the current exposure setting.</summary>
+    public int ImageCount => _lightRig.Settings.ImageCount * Exposures[ExposureIndex].Electrons.Length;
+
+    /// <summary>A short name for the pattern in an image, for on screen.</summary>
+    public string DescribePattern(int image)
+    {
+        StructuredLightSettings settings = _lightRig.Settings;
+        return image < settings.SineSteps
+            ? $"sinus, {image * 360 / settings.SineSteps} graden verschoven"
+            : $"strepen (Gray-code) {image - settings.SineSteps + 1} van {settings.GrayBits}, van grof naar fijn";
+    }
 
     /// <summary>The camera model that belongs to the measurement.</summary>
     public PinholeCamera Camera => _rig.Camera;
@@ -69,15 +96,26 @@ public sealed class SensorMeasurement
         if (Kind == SensorKind.Formula)
         {
             Result = DepthSensorModel.Apply(Camera, IdealDepth, _projectorDepth, _reflectance, _settings);
+            PatternImages = System.Array.Empty<float[]>();
         }
         else
         {
+            // The scene does not change between exposures, so one render of the light serves them all.
+            // Each exposure gets noise of its own, as separate camera images would.
             List<float[]> light = await _lightRig.CaptureAsync(links);
-            // New noise for every measurement, but the same series gives the same noise when it is run again.
-            List<float[]> images = light
-                .Select((image, i) => CameraNoiseModel.Expose(image, Noise, _measurements * 100 + i))
-                .ToList();
-            Result = PatternDecoder.Decode(Camera, _lightRig.Projector, _lightRig.Settings, images);
+            var measurements = new List<DepthSensorResult>();
+            float[] exposures = Exposures[ExposureIndex].Electrons;
+            for (int e = 0; e < exposures.Length; e++)
+            {
+                var noise = new CameraNoiseSettings { ElectronsPerLightUnit = exposures[e] };
+                // New noise for every measurement, but the same series gives the same noise when it is run again.
+                List<float[]> images = light
+                    .Select((image, i) => CameraNoiseModel.Expose(image, noise, _measurements * 1000 + e * 100 + i))
+                    .ToList();
+                measurements.Add(PatternDecoder.Decode(Camera, _lightRig.Projector, _lightRig.Settings, images));
+                PatternImages = images;
+            }
+            Result = measurements.Count == 1 ? measurements[0] : HdrCombiner.Combine(measurements);
         }
         Report(Result, partName);
     }
@@ -108,7 +146,9 @@ public sealed class SensorMeasurement
             : $"weinig signaal of schaduw {Percent(stats.PartLowSignal, stats.PartPixels):F0}%, " +
               $"patronen oneens {Percent(stats.PartEdge, stats.PartPixels):F0}%, " +
               $"overbelicht {Percent(stats.PartOverexposed, stats.PartPixels):F0}%";
-        string sensor = Kind == SensorKind.Formula ? "Sensor (formule)" : $"Sensor (licht, {_lightRig.Settings.ImageCount} beelden)";
+        string sensor = Kind == SensorKind.Formula
+            ? "Sensor (formule)"
+            : $"Sensor (licht, belichting {Exposures[ExposureIndex].Name}, {ImageCount} beelden)";
         Summary = $"{sensor}, {partName}: {Percent(stats.PartMissing, stats.PartPixels):F0}% zonder meting " +
                   $"({reasons}), afwijking {stats.PartNoiseMeters * 1000.0:F1} mm";
         GD.Print($"INFO {Summary}; hout en achtergrond " +
