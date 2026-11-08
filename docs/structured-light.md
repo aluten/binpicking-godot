@@ -109,18 +109,47 @@ HDR (`HdrCombiner`) decodes each exposure and takes per pixel the longest exposu
 rendered once and each exposure gets its own noise, because the scene does not change between them. A real camera
 takes all 22 images.
 
-Reference fill, one measurement each, links only:
+Reference fill, one measurement each, links only, with the noise check below:
 
 | Setting | Black: holes, deviation | Black: pick points | White: holes, deviation | White: pick points |
 |---|---|---:|---|---:|
-| Short | 7%, 5.7 mm | 3 | 5%, 1.4 mm | 608 |
-| Medium | 5%, 2.6 mm | 269 | 84% (79% overexposed) | 0 |
+| Short | 9%, 4.2 mm | 3 | 5%, 1.2 mm | 608 |
+| Medium | 6%, 2.1 mm | 269 | 84% (79% overexposed) | 0 |
 | Long | 9% (4% overexposed), 1.3 mm | 467 | 98% (94% overexposed) | 0 |
-| HDR | 5%, 1.5 mm | 451 | 5%, 1.1 mm | 616 |
+| HDR | 5%, 1.3 mm | 451 | 5%, 1.1 mm | 617 |
 
 Only HDR works well for both colours. It costs twice as many images, so in a real cell twice the capture time. In
 every working setting, 17 or 18 of the best candidates sealed when checked against perfect depth. The wooden rim is
 overexposed at medium and long exposure, which is visible in orange.
+
+### Picks with HDR
+
+Twenty picks each on the reference fill, HDR, measuring again after every pick:
+
+| | Black | White |
+|---|---:|---:|
+| Placed | 12 of 20 | 12 of 20 |
+| Lost while lifting | 8 | 8 |
+| No seal | 0 | 0 |
+| Best candidates that seal (per measurement) | 16 to 19 of 20 | 14 to 20 of 20 |
+| Links without measurement | 5% | 4 to 5% |
+
+Measuring is no longer the limit: black and white now give the same result, and every chosen point sealed. The losses
+come from neighbours while lifting; see [picking.md](picking.md#why-links-come-off-during-lifting). Compared with
+14 of 20 at medium exposure without the noise check, the difference is within what 20 picks can show.
+
+## Noise check
+
+Too little light can give a wrong depth instead of a hole. Noise can flip one stripe bit, so the decoder picks the wrong
+sine period and the depth is centimetres off. The check between stripes and sine cannot see this, because it always
+finds a period that fits.
+
+The decoder therefore compares each pixel with its own expected noise: shot noise of the light it received plus read
+noise. Below `MinSignalToNoise` (5) times that noise, the pixel becomes a hole. This needs the decoder to know the image
+sensor, which a real camera does; the formula sensor has no such check.
+
+In the core tests, a dark plate with the short exposure gave 1,163 pixels more than 50 mm off without the check, and
+0 with it. On the bin, the average deviation of black at short exposure dropped from 5.7 to 4.2 mm, with 2% more holes.
 
 ## Camera images
 
@@ -139,12 +168,8 @@ orange. With HDR, the images of the long exposure are shown.
 
 ## What is not in it
 
-- **Holes are probably too few.** `MinModulation` is low and is a first choice. Nothing filters by confidence, and a real
-  camera does. Light that reflects between links, which disturbs real measurements in a bin, is not simulated either.
+- **Holes are probably too few.** The thresholds are first choices. Light that reflects between links, which disturbs
+  real measurements in a bin, is not simulated.
 - **No lens blur or distortion**, and the camera and projector are perfectly calibrated.
-- **Too little light can give wrong depth instead of a hole.** The decoder only rejects a pixel below a fixed
-  amplitude and when stripes and sine disagree. With weak signal the period can still be chosen wrongly, which gives an
-  error of many centimetres; a test with a dark plate and a short exposure averaged 463 mm. A threshold that depends on
-  the noise would catch this, and is not built.
 - **Holes in shadow count as low signal**, because the images alone cannot tell the two apart.
-- **One fill, one exposure, one seed.** White links and other exposures were not run as a pick series.
+- **One fill, one seed.** Pick series exist for medium exposure (black) and HDR (black and white) only.

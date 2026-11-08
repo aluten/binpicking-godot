@@ -206,6 +206,17 @@ DepthSensorResult darkHdr = HdrCombiner.Combine(new[] { darkShort, darkLong });
 Check($"HDR takes the long exposure on a dark plate ({DepthError(darkHdr, 2f) * 1000f:F1} mm, short alone {DepthError(darkShort, 2f) * 1000f:F1} mm)",
     MeasuredShare(darkHdr) >= MeasuredShare(darkShort) && DepthError(darkHdr, 2f) <= DepthError(darkLong, 2f) + 1e-6);
 DepthSensorResult nothing = HdrCombiner.Combine(new[] { DecodePlate(2f, 0.0005f, shortExposure), DecodePlate(2f, 0.0005f, longExposure) });
+// A weak signal: plate light 0.1 with the short exposure. Count pixels that are more than 50 mm off.
+float[] plate = Enumerable.Repeat(2f, lightCamera.Width * lightCamera.Height).ToArray();
+int Wrong(DepthSensorResult r) => r.Depth.Count(d => !float.IsNaN(d) && MathF.Abs(d - 2f) > 0.05f);
+DepthSensorResult darkChecked = DecodeDepths(plate, 0.1f, shortExposure, checkNoise: true);
+Check($"With the noise check, a weak signal gives holes instead of wrong depth " +
+      $"({Wrong(darkShort)} wrong pixels without the check, {Wrong(darkChecked)} with it)",
+    Wrong(darkShort) > 100 && Wrong(darkChecked) == 0);
+DepthSensorResult mediumChecked = DecodeDepths(plate, 0.4f, shortExposure, checkNoise: true);
+Check($"At a moderate signal the check removes the wrong pixels and keeps most ({MeasuredShare(mediumChecked) * 100:F0}% measured, {Wrong(mediumChecked)} wrong)",
+    Wrong(mediumChecked) == 0 && MeasuredShare(mediumChecked) > 0.9);
+Check("The noise check keeps a well-lit plate", MeasuredShare(DecodeDepths(Enumerable.Repeat(2f, lightCamera.Width * lightCamera.Height).ToArray(), 1.5f, sensor, checkNoise: true)) > 0.99);
 Check("Without light HDR reports low signal", nothing.Missing.Count(m => m == MissingReason.LowSignal) > lightCamera.Width * lightCamera.Height / 2);
 
 Console.WriteLine(failures == 0 ? "RESULT: PASSED" : $"RESULT: {failures} TESTS FAILED");
@@ -217,7 +228,7 @@ DepthSensorResult DecodePlate(float z, float light, CameraNoiseSettings? noise) 
     DecodeDepths(Enumerable.Repeat(z, lightCamera.Width * lightCamera.Height).ToArray(), light, noise);
 
 // Renders the scene by hand: each pixel receives the pattern value of the column that lights its point.
-DepthSensorResult DecodeDepths(float[] depths, float light, CameraNoiseSettings? noise)
+DepthSensorResult DecodeDepths(float[] depths, float light, CameraNoiseSettings? noise, bool checkNoise = false)
 {
     var images = new List<float[]>();
     for (int image = 0; image < lightSettings.ImageCount; image++)
@@ -232,7 +243,7 @@ DepthSensorResult DecodeDepths(float[] depths, float light, CameraNoiseSettings?
             ? lit.Select(v => MathF.Min(v / 2f, 1f)).ToArray()
             : CameraNoiseModel.Expose(lit, noise, 100 + image));
     }
-    return PatternDecoder.Decode(lightCamera, projector, lightSettings, images);
+    return PatternDecoder.Decode(lightCamera, projector, lightSettings, images, checkNoise ? noise : null);
 }
 
 double MeasuredShare(DepthSensorResult result) => result.Depth.Count(d => !float.IsNaN(d)) / (double)result.Depth.Length;

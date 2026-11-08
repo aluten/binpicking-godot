@@ -13,9 +13,14 @@ public static class PatternDecoder
     /// <param name="projector">The projector that lit the scene.</param>
     /// <param name="settings">The patterns, which must match what was projected.</param>
     /// <param name="images">The images in the order of <see cref="PatternGenerator"/>, from 0 to 1 per pixel.</param>
+    /// <param name="sensor">
+    /// The image sensor, if known. Then each pixel is checked against its own expected noise, see
+    /// <see cref="StructuredLightSettings.MinSignalToNoise"/>. Without it only the fixed minimum amplitude applies.
+    /// </param>
     /// <returns>Depth in metres with NaN for a hole, the same form as the sensor model delivers.</returns>
     public static DepthSensorResult Decode(
-        PinholeCamera camera, ProjectorModel projector, StructuredLightSettings settings, IReadOnlyList<float[]> images)
+        PinholeCamera camera, ProjectorModel projector, StructuredLightSettings settings, IReadOnlyList<float[]> images,
+        CameraNoiseSettings? sensor = null)
     {
         if (images.Count != settings.ImageCount)
         {
@@ -28,7 +33,7 @@ public static class PatternDecoder
         for (int i = 0; i < count; i++)
         {
             depth[i] = float.NaN;
-            missing[i] = DecodePixel(camera, projector, settings, images, i, out float z);
+            missing[i] = DecodePixel(camera, projector, settings, images, sensor, i, out float z);
             if (missing[i] == MissingReason.None)
             {
                 depth[i] = z;
@@ -39,7 +44,7 @@ public static class PatternDecoder
 
     private static MissingReason DecodePixel(
         PinholeCamera camera, ProjectorModel projector, StructuredLightSettings settings,
-        IReadOnlyList<float[]> images, int pixel, out float z)
+        IReadOnlyList<float[]> images, CameraNoiseSettings? sensor, int pixel, out float z)
     {
         z = float.NaN;
 
@@ -64,6 +69,17 @@ public static class PatternDecoder
             return MissingReason.LowSignal;
         }
         double threshold = sum / settings.SineSteps;
+
+        // Expected noise of one image at this brightness: shot noise plus read noise, in the same 0 to 1 scale.
+        if (sensor != null)
+        {
+            double electrons = threshold * sensor.FullWellElectrons;
+            double noise = Math.Sqrt(electrons + sensor.ReadNoiseElectrons * sensor.ReadNoiseElectrons) / sensor.FullWellElectrons;
+            if (amplitude < settings.MinSignalToNoise * noise)
+            {
+                return MissingReason.LowSignal;
+            }
+        }
         double phase = Math.Atan2(-sumSin, sumCos);
 
         // Stripes: which half period is this?

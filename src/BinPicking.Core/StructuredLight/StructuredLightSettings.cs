@@ -18,6 +18,13 @@ public sealed record StructuredLightSettings
     /// <summary>Below this sine amplitude a pixel has no usable signal, as a share of the full scale of the camera.</summary>
     public float MinModulation { get; init; } = 0.002f;
 
+    /// <summary>
+    /// Below this ratio of sine amplitude to image noise, a pixel is rejected. Noise can flip a stripe bit, which
+    /// picks the wrong period and gives a depth that is centimetres off without any warning. Only used when the
+    /// decoder knows the image sensor. 5 means the stripes stand about five noise widths above the threshold.
+    /// </summary>
+    public float MinSignalToNoise { get; init; } = 5f;
+
     /// <summary>A pixel at or above this share of the full scale counts as overexposed.</summary>
     public float SaturationLevel { get; init; } = 0.98f;
 

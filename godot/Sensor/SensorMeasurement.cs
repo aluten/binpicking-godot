@@ -112,7 +112,8 @@ public sealed class SensorMeasurement
                 List<float[]> images = light
                     .Select((image, i) => CameraNoiseModel.Expose(image, noise, _measurements * 1000 + e * 100 + i))
                     .ToList();
-                measurements.Add(PatternDecoder.Decode(Camera, _lightRig.Projector, _lightRig.Settings, images));
+                // The decoder knows the sensor, so it can reject pixels whose signal is lost in the noise.
+                measurements.Add(PatternDecoder.Decode(Camera, _lightRig.Projector, _lightRig.Settings, images, noise));
                 PatternImages = images;
             }
             Result = measurements.Count == 1 ? measurements[0] : HdrCombiner.Combine(measurements);
