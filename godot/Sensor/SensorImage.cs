@@ -6,7 +6,7 @@ using static PalletDimensions;
 
 /// <summary>
 /// Draws depth as an RGB image. Near is light and far is dark.
-/// Holes: magenta is low light, blue is shadow and yellow is an edge.
+/// Holes: magenta is low light, blue is shadow, yellow is an edge (or patterns that disagree) and orange is overexposed.
 /// </summary>
 public static class SensorImage
 {
@@ -25,6 +25,7 @@ public static class SensorImage
                 {
                     MissingReason.LowSignal => ((byte)230, (byte)30, (byte)160),
                     MissingReason.Shadow => ((byte)40, (byte)90, (byte)230),
+                    MissingReason.Overexposed => ((byte)250, (byte)130, (byte)20),
                     _ => ((byte)240, (byte)210, (byte)30),
                 };
             }

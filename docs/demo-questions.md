@@ -73,10 +73,17 @@ built here.
 
 ## Taking the image and the lighting
 
-**How is it lit in this demo?** It is not. No pattern is projected and nothing is triangulated. Godot renders depth from
-the camera, depth from the projector position (for shadow) and an unlit colour image. `DepthSensorModel` then removes
-pixels with a formula: reflectance x cos(angle) x (reference distance / distance)². The lights in the 3D view only
-affect what you see on screen. See [sensor-model.md](sensor-model.md).
+**How is it lit in this demo?** That depends on the sensor, which key **L** switches.
+
+- **Formula (the start):** not lit. No pattern is projected and nothing is triangulated. Godot renders depth from the
+  camera, depth from the projector position (for shadow) and an unlit colour image. `DepthSensorModel` then removes
+  pixels with a formula: reflectance x cos(angle) x (reference distance / distance)². See [sensor-model.md](sensor-model.md).
+- **Projected light:** a spot light projects 11 patterns one after another (4 shifted sines, 7 Gray code stripes) and a
+  camera takes an image of each. Sensor noise is added and the depth is decoded and triangulated from the images alone.
+  See [structured-light.md](structured-light.md). The physics of the light is simplified: no reflections between links,
+  no lens blur, and the noise values are assumptions.
+
+The lights in the 3D view only affect what you see on screen, in both cases.
 
 **How does a real structured-light camera do it? Several light patterns?** Yes, a series of them. A projector lights the
 scene with one pattern after another, while the camera takes an image of each. For each pixel, the series gives a code

@@ -81,7 +81,8 @@ The settings are in `DepthSensorSettings.cs`.
 ## Viewing
 
 Open `Scenes/pallet_bin.tscn` and press F6. Key **4** switches between 3D, perfect depth and sensor. Key **B**
-really changes the colour of the links, after which the sensor measures again. The sensor hangs 1.5 m above the rim, with a 1280 x 960 image.
+really changes the colour of the links, after which the sensor measures again. Key **L** switches to measuring with
+projected light, which replaces this model; see [structured-light.md](structured-light.md). The sensor hangs 1.5 m above the rim, with a 1280 x 960 image.
 
 ## Result on the full reference fill
 

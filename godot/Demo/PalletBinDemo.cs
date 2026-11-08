@@ -121,6 +121,9 @@ public partial class PalletBinDemo : Node3D
             case Key.Key4:
                 NextSensorView();
                 break;
+            case Key.L when _sensor != null && _cycle == null && !_measuring:
+                _ = ToggleSensorKindAsync();
+                break;
             case Key.B when _sensor != null && _cycle == null && !_measuring:
                 _ = ToggleColorAsync();
                 break;
@@ -188,7 +191,13 @@ public partial class PalletBinDemo : Node3D
 
         var rig = new DepthSensorRig();
         AddChild(rig);
-        _sensor = new SensorMeasurement(rig);
+        var lightRig = new ProjectedLightRig();
+        AddChild(lightRig);
+        _sensor = new SensorMeasurement(rig, lightRig, _linkMesh!);
+        if (OS.GetCmdlineUserArgs().Contains("--light"))
+        {
+            _sensor.Kind = SensorKind.ProjectedLight;
+        }
         await MeasureAsync();
         await CaptureScreenshotIfRequested();
     }
@@ -197,7 +206,11 @@ public partial class PalletBinDemo : Node3D
     private async Task MeasureAsync()
     {
         _measuring = true;
-        await _sensor!.MeasureAsync(_appearance.IsWhite ? "witte schakels" : "zwarte schakels");
+        if (_sensor!.Kind == SensorKind.ProjectedLight)
+        {
+            _hud.SetStatus("Meten met geprojecteerd licht ...");
+        }
+        await _sensor.MeasureAsync(_appearance.IsWhite ? "witte schakels" : "zwarte schakels", _transforms);
         _measuring = false;
         _pick.Clear();
         if (_pick.Mode != PickDisplayMode.Hidden)
@@ -211,6 +224,13 @@ public partial class PalletBinDemo : Node3D
     private async Task ToggleColorAsync()
     {
         _appearance.SetWhite(!_appearance.IsWhite);
+        await MeasureAsync();
+    }
+
+    /// <summary>Key L: switches between the formula and projected light, and measures again.</summary>
+    private async Task ToggleSensorKindAsync()
+    {
+        _sensor!.Kind = _sensor.Kind == SensorKind.Formula ? SensorKind.ProjectedLight : SensorKind.Formula;
         await MeasureAsync();
     }
 
@@ -443,6 +463,7 @@ public partial class PalletBinDemo : Node3D
     /// For automated checks, without keys. Takes a screenshot with
     /// <c>godot ... -- --screenshot=path.png --view=name</c>, or runs a series with
     /// <c>godot ... -- --picks=20 [--white] [--lift-screenshot=path.png] [--screenshot=path.png]</c>.
+    /// Add <c>--light</c> to measure with projected light instead of the formula.
     /// </summary>
     private async Task CaptureScreenshotIfRequested()
     {

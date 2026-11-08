@@ -1,8 +1,8 @@
 # Experiment: measuring with projected light
 
-**Status:** experiment on the branch `experiment/structured-light`. The demo still uses the formula in
-[sensor-model.md](sensor-model.md). The sensor values below are illustrative, and this does not predict what a real
-camera measures.
+**Status:** experiment on the branch `experiment/structured-light`. In the demo, key **L** switches between this and
+the formula in [sensor-model.md](sensor-model.md); the demo starts with the formula. The sensor values below are
+illustrative, and this does not predict what a real camera measures.
 
 ## What it does
 
@@ -28,7 +28,21 @@ roughly 160 mm in depth.
 
 ## Running it
 
-Open `Scenes/structured_light_test.tscn` and press F6. The Output shows the numbers, and the window then shows the
+In the demo: open `Scenes/pallet_bin.tscn`, press F6 and then **L**. The status line names the sensor, and key **4**
+shows the measured image. Every new measurement, also after a pick, uses projected light until L is pressed again.
+Holes are magenta for too little signal (or shadow), yellow where the patterns disagree and orange for overexposed.
+For an automated series: `-- --light --picks=20`.
+
+| Class | Role |
+|---|---|
+| `ProjectedLightRig` | Godot: a world of its own with only the pallet and links, a camera and the spot light |
+| `SensorMeasurement` | Chooses the formula or the light, adds the noise and decodes; the rest of the demo sees no difference |
+| `SensorKind` | The two choices |
+
+The rig has its own world because the lights of the demo view would otherwise also light the bin in the images.
+The exposure is fixed at 16,000, which suits black links. White links then overexpose; that is intended for now.
+
+The separate test scene stays: open `Scenes/structured_light_test.tscn` and press F6. The Output shows the numbers, and the window then shows the
 measured black bin. `Scenes/projected_light_test.tscn` is the earlier test of the light itself; it only writes to the
 Output and closes.
 
@@ -61,6 +75,24 @@ Full bin, on the pixels that show a link:
 On a laptop with an RTX 4070, one image of the fill in the first light test took about 50 ms for 3 frames. Eleven images
 would then take well under a second, but the full measurement has not been timed there.
 
+### Picks on this measurement
+
+Twenty picks on the reference fill with black links, exposure 16,000, measuring again after every pick. The formula
+column is the earlier series with the same code for picking.
+
+| | Projected light | Formula |
+|---|---:|---:|
+| Placed | 14 of 20 | 12 of 20 |
+| Lost while lifting | 6 | 7 |
+| No seal | 0 | 1 |
+| Links on the measured surfaces, without measurement | 5% each time | 58% |
+| Average depth deviation per measurement | 2.3 to 6.9 mm | 0.5 mm |
+| Moved before lifting (artefact), on average | 3.1 | 2.8 |
+
+Every chosen point sealed, and in each measurement nearly all best candidates sealed when checked against perfect depth.
+The losses have the same cause as before, contact with neighbours while lifting; see
+[picking.md](picking.md#why-links-come-off-during-lifting). Twenty picks on one fill is too few to call 14 better than 12.
+
 ## What this shows
 
 - **Black mainly gives noise here, not holes.** The holes are 5 to 7%, and appear mostly where the projector does not
@@ -75,4 +107,4 @@ would then take well under a second, but the full measurement has not been timed
   camera does. Light that reflects between links, which disturbs real measurements in a bin, is not simulated either.
 - **No lens blur or distortion**, and the camera and projector are perfectly calibrated.
 - **Holes in shadow count as low signal**, because the images alone cannot tell the two apart.
-- **The picks were not run on this measurement.** Only the search was. Connecting it to the demo is the next step.
+- **One fill, one exposure, one seed.** White links and other exposures were not run as a pick series.

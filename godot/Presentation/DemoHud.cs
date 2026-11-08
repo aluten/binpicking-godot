@@ -15,10 +15,11 @@ public partial class DemoHud : CanvasLayer
         "Muis: slepen = draaien, middelste knop = verschuiven, wiel = zoomen\n" +
         "1 = overzicht, 2 = vanaf de sensor, 3 = dichtbij\n" +
         "4 = 3D / perfecte diepte / sensor, B = zwarte of witte schakels\n" +
+        "L = sensor: formule of geprojecteerd licht\n" +
         "P = kandidaten (blauw), nog een keer = keuze (groen), nog een keer = verbergen\n" +
         "G = één pick uitvoeren, A = reeks van 10 picks\n" +
         "R = vullen starten, nog een keer R = stoppen op deze hoogte\n" +
-        "Sensorbeeld: magenta = weinig licht, blauw = schaduw, geel = rand";
+        "Sensorbeeld: magenta = weinig licht, blauw = schaduw, geel = rand of oneens, oranje = overbelicht";
 
     private TextureRect _image = null!;
     private Label _status = null!;

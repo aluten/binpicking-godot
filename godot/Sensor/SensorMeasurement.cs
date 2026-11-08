@@ -1,12 +1,16 @@
 #nullable enable
 
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BinPicking.Core.Sensing;
+using BinPicking.Core.StructuredLight;
 using Godot;
 using static PalletDimensions;
 
 /// <summary>
-/// Captures what the sensor sees and turns it into a realistic measurement. The rest of the demo only uses
+/// Captures what the sensor sees and turns it into a realistic measurement, in one of two ways: perfect depth
+/// with a formula for holes and noise, or depth decoded from images of projected light. The rest of the demo only uses
 /// <see cref="Camera"/>, <see cref="Result"/> and, for verification, <see cref="IdealDepth"/>. So this is the
 /// class that a real camera would replace; see docs/demo-questions.md.
 /// </summary>
@@ -14,16 +18,32 @@ public sealed class SensorMeasurement
 {
     private readonly DepthSensorSettings _settings = new();
     private readonly DepthSensorRig _rig;
+    private readonly ProjectedLightRig _lightRig;
+    private int _measurements;
     private float[] _projectorDepth = System.Array.Empty<float>();
     private float[] _reflectance = System.Array.Empty<float>();
     private bool[] _isPart = System.Array.Empty<bool>();
 
-    /// <summary>Hangs the rig above the pallet, at the position of the sensor mount.</summary>
-    public SensorMeasurement(DepthSensorRig rig)
+    /// <summary>Hangs both rigs above the pallet, at the position of the sensor mount.</summary>
+    /// <param name="rig">Renders perfect depth, which both ways need: the formula as input, both for verification.</param>
+    /// <param name="lightRig">Projects the patterns.</param>
+    /// <param name="linkMesh">The link mesh, which the light rig draws in its own world.</param>
+    public SensorMeasurement(DepthSensorRig rig, ProjectedLightRig lightRig, Mesh linkMesh)
     {
         _rig = rig;
         _rig.Configure(SensorMount.Position, SensorMount.VerticalFovDegrees, _settings.ProjectorBaseline);
+        _lightRig = lightRig;
+        _lightRig.Configure(_rig.Camera, SensorMount.Position, SensorMount.VerticalFovDegrees, _settings.ProjectorBaseline, linkMesh);
     }
+
+    /// <summary>Which way the next measurement uses.</summary>
+    public SensorKind Kind { get; set; } = SensorKind.Formula;
+
+    /// <summary>
+    /// The image sensor of the projected-light measurement. The exposure suits black links; white links then
+    /// overexpose, which is the trade-off that real cameras solve with several exposures.
+    /// </summary>
+    public CameraNoiseSettings Noise { get; set; } = new() { ElectronsPerLightUnit = 16000f };
 
     /// <summary>The camera model that belongs to the measurement.</summary>
     public PinholeCamera Camera => _rig.Camera;
@@ -37,13 +57,28 @@ public sealed class SensorMeasurement
     /// <summary>One line about the measurement, for on screen.</summary>
     public string Summary { get; private set; } = string.Empty;
 
-    /// <summary>Captures the scene as it is now, including the colour of the links, and applies the sensor model.</summary>
+    /// <summary>Captures the scene as it is now, including the colour of the links, and measures it.</summary>
     /// <param name="partName">How to call the links in the summary.</param>
-    public async Task MeasureAsync(string partName)
+    /// <param name="links">The links in the bin, which the light rig draws in its own world.</param>
+    public async Task MeasureAsync(string partName, IReadOnlyList<Transform3D> links)
     {
+        _measurements++;
         (IdealDepth, _projectorDepth, _reflectance, _isPart) = await _rig.CaptureAsync();
         CheckRimDistance();
-        Result = DepthSensorModel.Apply(Camera, IdealDepth, _projectorDepth, _reflectance, _settings);
+
+        if (Kind == SensorKind.Formula)
+        {
+            Result = DepthSensorModel.Apply(Camera, IdealDepth, _projectorDepth, _reflectance, _settings);
+        }
+        else
+        {
+            List<float[]> light = await _lightRig.CaptureAsync(links);
+            // New noise for every measurement, but the same series gives the same noise when it is run again.
+            List<float[]> images = light
+                .Select((image, i) => CameraNoiseModel.Expose(image, Noise, _measurements * 100 + i))
+                .ToList();
+            Result = PatternDecoder.Decode(Camera, _lightRig.Projector, _lightRig.Settings, images);
+        }
         Report(Result, partName);
     }
 
@@ -65,12 +100,18 @@ public sealed class SensorMeasurement
             result, IdealDepth, i => _isPart[i]);
 
         double Percent(int value, int total) => total == 0 ? 0.0 : 100.0 * value / total;
-        Summary = $"{partName}: {Percent(stats.PartMissing, stats.PartPixels):F0}% zonder meting " +
-                  $"(weinig licht {Percent(stats.PartLowSignal, stats.PartPixels):F0}%, " +
-                  $"schaduw {Percent(stats.PartShadow, stats.PartPixels):F0}%, " +
-                  $"rand {Percent(stats.PartEdge, stats.PartPixels):F0}%), " +
-                  $"ruis {stats.PartNoiseMeters * 1000.0:F1} mm";
-        GD.Print($"INFO Sensor, {Summary}; hout en achtergrond " +
+        string reasons = Kind == SensorKind.Formula
+            ? $"weinig licht {Percent(stats.PartLowSignal, stats.PartPixels):F0}%, " +
+              $"schaduw {Percent(stats.PartShadow, stats.PartPixels):F0}%, " +
+              $"rand {Percent(stats.PartEdge, stats.PartPixels):F0}%"
+            // From the images alone, shadow cannot be told apart from too little light.
+            : $"weinig signaal of schaduw {Percent(stats.PartLowSignal, stats.PartPixels):F0}%, " +
+              $"patronen oneens {Percent(stats.PartEdge, stats.PartPixels):F0}%, " +
+              $"overbelicht {Percent(stats.PartOverexposed, stats.PartPixels):F0}%";
+        string sensor = Kind == SensorKind.Formula ? "Sensor (formule)" : $"Sensor (licht, {_lightRig.Settings.ImageCount} beelden)";
+        Summary = $"{sensor}, {partName}: {Percent(stats.PartMissing, stats.PartPixels):F0}% zonder meting " +
+                  $"({reasons}), afwijking {stats.PartNoiseMeters * 1000.0:F1} mm";
+        GD.Print($"INFO {Summary}; hout en achtergrond " +
                  $"{Percent(stats.OtherMissing, stats.OtherPixels):F0}% zonder meting");
     }
 }

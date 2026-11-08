@@ -28,6 +28,7 @@ changes for the vision problem. The number is `FullBinLinks` in `BinFiller`.
 | 1 / 2 / 3 | Overview / from the sensor / close-up |
 | 4 | 3D / perfect depth / sensor |
 | B | Make the links black or white; the sensor measures again |
+| L | Sensor: formula or projected light; the sensor measures again. See [structured-light.md](structured-light.md) |
 | G / A | Perform one pick / 10 picks in a row |
 | H, or click the legend button | Show or hide the legend |
 | R | Empty and fill the bin; press R again to stop at that height |
