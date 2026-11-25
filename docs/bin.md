@@ -27,6 +27,8 @@ changes for the vision problem. The number is `FullBinLinks` in `BinFiller`.
 | Mouse wheel | Zoom; in the overview, zooming in ends inside the bin |
 | 1 / 2 / 3 | Overview / from the sensor / close-up |
 | 4 | 3D / perfect depth / sensor |
+| C | Point cloud: measured / perfect / off. The links are hidden while it is shown. See [sensor-model.md](sensor-model.md#point-cloud) |
+| X | Save the point cloud as a PLY file; the folder appears in the Output panel |
 | B | Make the links black or white; the sensor measures again |
 | L | Sensor: formula or projected light; the sensor measures again. See [structured-light.md](structured-light.md) |
 | E | With projected light: exposure short / medium / long / HDR; the sensor measures again |

@@ -1,10 +1,12 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BinPicking.Core.Grasping;
 using BinPicking.Core.Picking;
+using BinPicking.Core.Sensing;
 using BinPicking.Core.StructuredLight;
 using Godot;
 using static PalletDimensions;
@@ -24,6 +26,14 @@ public partial class PalletBinDemo : Node3D
         Scene3D,
         PerfectDepth,
         Measured,
+    }
+
+    /// <summary>Which depth the point cloud shows with key C. The links are hidden while it is shown.</summary>
+    private enum CloudView
+    {
+        Off,
+        Measured,
+        Perfect,
     }
 
     /// <summary>Picks in the series started with key A.</summary>
@@ -47,6 +57,7 @@ public partial class PalletBinDemo : Node3D
     private OrbitCamera _camera = null!;
     private DemoHud _hud = null!;
     private GraspMarkers _markers = null!;
+    private PointCloudView _cloudView = null!;
     private LinkAppearance _appearance = null!;
     private BinFiller? _filler;
     private BinFillView? _fillView;
@@ -64,6 +75,11 @@ public partial class PalletBinDemo : Node3D
     private readonly List<Vector3> _failedPoints = new();
     private List<Transform3D> _transforms = new();
     private SensorView _view = SensorView.Scene3D;
+    private CloudView _cloud = CloudView.Off;
+    private (DepthSensorResult? Result, CloudView View) _cloudDrawn; // What the point cloud shows now, so it is only rebuilt when that changes.
+    private string _cloudSummary = string.Empty;
+    private string _exportSummary = string.Empty; // Where the last PLY file went, until the next measurement.
+    private int _cloudExports;
     private int _patternImage = -1; // The camera image shown with key K, or -1 for none.
     private bool _measuring;
     private int _autoPicksLeft;
@@ -85,6 +101,8 @@ public partial class PalletBinDemo : Node3D
         AddChild(new PalletBin());
         _markers = new GraspMarkers();
         AddChild(_markers);
+        _cloudView = new PointCloudView();
+        AddChild(_cloudView);
         _hud = new DemoHud();
         AddChild(_hud);
         BuildCamera();
@@ -122,6 +140,12 @@ public partial class PalletBinDemo : Node3D
                 break;
             case Key.Key4:
                 NextSensorView();
+                break;
+            case Key.C when _sensor?.Result != null && _cycle == null && !_measuring:
+                NextCloudView();
+                break;
+            case Key.X when _sensor?.Result != null && !_measuring:
+                ExportCloud();
                 break;
             case Key.L when _sensor != null && _cycle == null && !_measuring:
                 _ = ToggleSensorKindAsync();
@@ -221,6 +245,8 @@ public partial class PalletBinDemo : Node3D
     {
         _measuring = true;
         _patternImage = -1;
+        _exportSummary = string.Empty;
+        _fillView!.Visible = true; // The depth camera renders the links in this view, also when the point cloud hides them.
         if (_sensor!.Kind == SensorKind.ProjectedLight)
         {
             _hud.SetStatus("Meten met geprojecteerd licht ...");
@@ -286,6 +312,61 @@ public partial class PalletBinDemo : Node3D
     /// <summary>Searches on the measured depth. Perfect depth is only passed on to verify the result afterwards.</summary>
     private void SearchPicks() => _pick.Search(_sensor!.Camera, _sensor.Result!.Depth, _sensor.IdealDepth);
 
+    /// <summary>Key C: the measured point cloud, then the perfect one for comparison, then the links again.</summary>
+    private void NextCloudView()
+    {
+        _cloud = (CloudView)(((int)_cloud + 1) % 3);
+        _view = SensorView.Scene3D;
+        _patternImage = -1;
+        RefreshDisplay();
+    }
+
+    /// <summary>
+    /// Key X: writes the shown point cloud, or the measured one when none is shown, as a PLY file at full resolution.
+    /// The file opens in CloudCompare, MeshLab or Open3D.
+    /// </summary>
+    private void ExportCloud()
+    {
+        bool perfect = _cloud == CloudView.Perfect;
+        float[] depth = perfect ? _sensor!.IdealDepth : _sensor!.Result!.Depth;
+        PointCloud cloud = PointCloud.FromDepth(_sensor.Camera, depth, maxDepth: PointCloudView.MaxDepth);
+        _cloudExports++;
+        string path = ProjectSettings.GlobalizePath($"user://puntenwolk-{_cloudExports}-{(perfect ? "perfect" : "gemeten")}.ply");
+        using (var writer = new StreamWriter(path))
+        {
+            cloud.WritePly(writer);
+        }
+        GD.Print($"INFO Puntenwolk opgeslagen: {cloud.Count} punten in {path}");
+        _exportSummary = $"Opgeslagen: {Path.GetFileName(path)} ({cloud.Count:N0} punten); de map staat in het Output-paneel";
+        RefreshDisplay();
+    }
+
+    /// <summary>Shows or hides the point cloud and the links, and rebuilds the cloud only after a new measurement.</summary>
+    private void ApplyCloudView()
+    {
+        if (_cloud == CloudView.Off)
+        {
+            _cloudView.HideCloud();
+            _fillView!.Visible = true;
+            _cloudDrawn = (null, CloudView.Off);
+            return;
+        }
+
+        _fillView!.Visible = false;
+        if (_cloudDrawn != (_sensor!.Result, _cloud))
+        {
+            float[] depth = _cloud == CloudView.Perfect ? _sensor.IdealDepth : _sensor.Result!.Depth;
+            PointCloud cloud = PointCloud.FromDepth(_sensor.Camera, depth, PointCloudView.PixelStep, PointCloudView.MaxDepth);
+            _cloudView.ShowCloud(cloud);
+            _cloudDrawn = (_sensor.Result, _cloud);
+            (float low, float high) = _cloudView.HeightRange;
+            _cloudSummary = $"Puntenwolk {(_cloud == CloudView.Perfect ? "perfect (alleen in simulatie)" : "gemeten")}: " +
+                            $"{cloud.Count:N0} punten (elke {PointCloudView.PixelStep}e pixel); kleur = hoogte in de bak, " +
+                            $"blauw {low * 100f:F0} cm tot rood {high * 100f:F0} cm; geen punt = geen meting";
+        }
+        _cloudView.Visible = true;
+    }
+
     private void NextSensorView()
     {
         if (_sensor?.Result == null)
@@ -300,8 +381,11 @@ public partial class PalletBinDemo : Node3D
     /// <summary>Brings the status text, the markers and the sensor image in line with the current state.</summary>
     private void RefreshDisplay()
     {
+        ApplyCloudView();
         string pickLine = _lastPickSummary.Length > 0 ? $"\n{_lastPickSummary}" : string.Empty;
-        _hud.SetStatus($"{_sensor!.Summary}\n{_pick.Summary}{pickLine}");
+        string cloudLine = _cloud != CloudView.Off ? $"\n{_cloudSummary}" : string.Empty;
+        string exportLine = _exportSummary.Length > 0 ? $"\n{_exportSummary}" : string.Empty;
+        _hud.SetStatus($"{_sensor!.Summary}\n{_pick.Summary}{pickLine}{cloudLine}{exportLine}");
         _markers.ShowPicks(_pick);
 
         if (_patternImage >= 0)
@@ -365,6 +449,8 @@ public partial class PalletBinDemo : Node3D
         }
 
         _view = SensorView.Scene3D;
+        _cloud = CloudView.Off; // The pick needs the links, and the cloud is out of date once the bin changes.
+        ApplyCloudView();
         _hud.ShowImage(null);
         _pick.HideDisplay();
         _markers.ShowPicks(_pick);
@@ -507,7 +593,8 @@ public partial class PalletBinDemo : Node3D
     /// <c>godot ... -- --screenshot=path.png --view=name</c>, or runs a series with
     /// <c>godot ... -- --picks=20 [--white] [--lift-screenshot=path.png] [--screenshot=path.png]</c>.
     /// Add <c>--light</c> to measure with projected light instead of the formula, and <c>--exposure=3</c> to choose
-    /// an exposure setting (0 short, 1 medium, 2 long, 3 HDR). View <c>pattern-N</c> shows camera image N.
+    /// an exposure setting (0 short, 1 medium, 2 long, 3 HDR). View <c>pattern-N</c> shows camera image N, and views
+/// <c>cloud</c> and <c>cloud-perfect</c> show the measured or perfect point cloud close up.
     /// </summary>
     private async Task CaptureScreenshotIfRequested()
     {
@@ -563,6 +650,15 @@ public partial class PalletBinDemo : Node3D
                 break;
             case "candidates":
                 NextPickMode();
+                break;
+            case "cloud":
+            case "cloud-perfect":
+                ShowCloseUp();
+                NextCloudView();
+                if (view == "cloud-perfect")
+                {
+                    NextCloudView();
+                }
                 break;
             case "white":
                 await ToggleColorAsync();

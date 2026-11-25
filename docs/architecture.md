@@ -37,6 +37,7 @@ the same algorithms.
 | | `DepthSensorSettings` | Settings of the sensor model |
 | | `DepthSensorResult`, `MissingReason` | Measured depth, and why a pixel has none |
 | | `DepthSensorStatistics` | Summarises a measurement |
+| | `PointCloud` | Turns measured depth into 3D points, and writes them as a PLY file |
 | `StructuredLight` | `PatternGenerator`, `PatternDecoder`, `ProjectorModel`, `CameraNoiseModel`, `HdrCombiner` | Experiment: depth from projected patterns; see [structured-light.md](structured-light.md) |
 | `Picking` | `SuctionCupSpecification`, `CupContact` | What a cup can hold, and the contact-ring test |
 | | `PickOutcome`, `PickResult`, `PickStatistics` | Pick results |
@@ -64,6 +65,7 @@ the same algorithms.
 | | `SensorMount` | Sensor position and the camera-to-world mapping |
 | | `SensorMeasurement` | Applies the sensor model to a capture |
 | | `SensorImage` | Draws depth as an image |
+| | `PointCloudView` | Draws a measurement as a point cloud in the 3D view |
 | `Picking` | `PickCycle` | Performs one pick from approach to settling |
 | | `PickRegion` | The physics around one pick |
 | | `VacuumHold` | Holds a link with limited force and torque |

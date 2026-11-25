@@ -84,6 +84,31 @@ Open `Scenes/pallet_bin.tscn` and press F6. Key **4** switches between 3D, perfe
 really changes the colour of the links, after which the sensor measures again. Key **L** switches to measuring with
 projected light, which replaces this model; see [structured-light.md](structured-light.md). The sensor hangs 1.5 m above the rim, with a 1280 x 960 image.
 
+## Point cloud
+
+A depth image is often shown as a point cloud: every measured pixel becomes a 3D point. `PointCloud` in
+`BinPicking.Core` unprojects each pixel through the camera model, `X = (u - cx) Z / fx` and
+`Y = (v - cy) Z / fy`, and `SensorMount` places the points in the world. A hole in the measurement is simply a
+missing point, so the cloud shows exactly what the pick search gets to work with.
+
+| Key | Effect |
+|---|---|
+| C | The measured cloud, then the perfect cloud for comparison, then the links again |
+| X | Saves the shown cloud (or the measured one) at full resolution as an ASCII PLY file in camera space |
+
+In the 3D view, points inside the bin are coloured by height, from blue (low) to red (high). The walls, rim,
+pallet and ground are grey, because otherwise the walls from floor to rim stretch the colour scale. The scale
+leaves out the lowest and highest 2% of the points; the status line gives its range in centimetres. To keep it
+light, the view uses every second pixel in both directions, about 300,000 points. The PLY file uses every pixel and
+opens in CloudCompare, MeshLab or Open3D, just like the export of a real 3D camera. It is saved in the Godot user
+folder; the Output panel gives the full path.
+
+The pick markers (key P) stay visible on top of the cloud, so you can see which surface a candidate sits on.
+The cloud is hidden at the start of a pick, because the pick needs the links and the bin changes.
+
+A check on Linux with a software renderer (llvmpipe), with boxes instead of links: the points lie exactly on the
+boxes and the rim.
+
 ## Result on the full reference fill
 
 Rendered with a software renderer on the Linux cloud computer:

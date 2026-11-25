@@ -18,7 +18,7 @@ dotnet run --project tests/BinPicking.Core.Tests
 ```
 
 These tests use no extra packages. They cover the sensor model, each reason `GraspEvaluator` can reject a
-location for, the search, and the statistics.
+location for, the search, the statistics, and the point cloud with its PLY file.
 
 ## Depth test
 

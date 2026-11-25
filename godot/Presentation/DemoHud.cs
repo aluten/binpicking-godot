@@ -15,6 +15,7 @@ public partial class DemoHud : CanvasLayer
         "Muis: slepen = draaien, middelste knop = verschuiven, wiel = zoomen\n" +
         "1 = overzicht, 2 = vanaf de sensor, 3 = dichtbij\n" +
         "4 = 3D / perfecte diepte / sensor, B = zwarte of witte schakels\n" +
+        "C = puntenwolk gemeten / perfect / uit (kleur = hoogte), X = puntenwolk opslaan als .ply\n" +
         "L = sensor: formule of geprojecteerd licht\n" +
         "E = belichting kort / middel / lang / HDR, K = camerabeelden één voor één (bij licht)\n" +
         "P = kandidaten (blauw), nog een keer = keuze (groen), nog een keer = verbergen\n" +

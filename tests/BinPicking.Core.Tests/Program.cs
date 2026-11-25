@@ -219,6 +219,28 @@ Check($"At a moderate signal the check removes the wrong pixels and keeps most (
 Check("The noise check keeps a well-lit plate", MeasuredShare(DecodeDepths(Enumerable.Repeat(2f, lightCamera.Width * lightCamera.Height).ToArray(), 1.5f, sensor, checkNoise: true)) > 0.99);
 Check("Without light HDR reports low signal", nothing.Missing.Count(m => m == MissingReason.LowSignal) > lightCamera.Width * lightCamera.Height / 2);
 
+// Point cloud. A plate at 2 m with a hole in the middle and background beyond 5 m in one corner.
+var cloudCamera = PinholeCamera.FromVerticalFov(100, 80, 40f);
+float[] cloudDepth = Enumerable.Repeat(2f, 100 * 80).ToArray();
+cloudDepth[40 * 100 + 50] = float.NaN;
+cloudDepth[0] = 6f;
+PointCloud cloud = PointCloud.FromDepth(cloudCamera, cloudDepth, maxDepth: 5f);
+Check("Every measured pixel becomes a point; holes and background do not", cloud.Count == 100 * 80 - 2);
+Check("All points of the plate lie at its depth", Enumerable.Range(0, cloud.Count).All(i => cloud.Z(i) == 2f));
+(float cornerX, float cornerY) = cloudCamera.Unproject(1, 0, 2f);
+Check("A point lies where the camera model says", MathF.Abs(cloud.X(0) - cornerX) < 1e-6f && MathF.Abs(cloud.Y(0) - cornerY) < 1e-6f);
+PointCloud farCloud = PointCloud.FromDepth(cloudCamera, Enumerable.Repeat(3f, 100 * 80).ToArray());
+Check("The same pixel lies 1.5 times further from the axis at 1.5 times the depth",
+    MathF.Abs(farCloud.X(1) / cloud.X(0) - 1.5f) < 1e-4f);
+Check("A step of 2 keeps a quarter of the points", PointCloud.FromDepth(cloudCamera, Enumerable.Repeat(2f, 100 * 80).ToArray(), step: 2).Count == 50 * 40);
+var ply = new StringWriter();
+cloud.WritePly(ply);
+string[] plyLines = ply.ToString().TrimEnd('\n').Split('\n');
+Check("The PLY file names the number of points and has one line per point",
+    plyLines.Contains($"element vertex {cloud.Count}") &&
+    plyLines.Length - Array.IndexOf(plyLines, "end_header") - 1 == cloud.Count);
+Check("The PLY file uses a decimal point", plyLines[^1].Split(' ').All(v => float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _)));
+
 Console.WriteLine(failures == 0 ? "RESULT: PASSED" : $"RESULT: {failures} TESTS FAILED");
 return failures == 0 ? 0 : 1;
 
